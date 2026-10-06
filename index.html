@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Student Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--c1:#7c2ddb;--c2:#e8399b;--c3:#ff7a1a;--acc:#f97316;--bg:#faf6f1;--card:#fff;--ink:#17141f;--mut:#8b8478;--line:#efe7dd;--tint:#f4efe8;--ok:#12a36b;--bad:#e5484d;--warn:#d99a00}
+html[data-dark]{--bg:#14121a;--card:#1d1a26;--ink:#f3f0fa;--mut:#9a94ab;--line:#2c2838;--tint:#262232}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:12px 14px}
+.top h1{font-size:17px;font-weight:700;flex:1;margin-left:6px}
+.ib{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--ink)}
+.ib:active{background:var(--tint)}
+main{flex:1;padding:16px 16px 76px;display:flex;flex-direction:column;gap:14px}
+.foot{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:var(--card);border-top:1px solid var(--line);text-align:center;font-size:12px;color:var(--mut);padding:13px;z-index:10}
+.foot b{background:linear-gradient(90deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.hero{border-radius:20px;padding:20px;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2) 55%,var(--c3));display:grid;grid-template-columns:1fr 128px;gap:12px;box-shadow:0 10px 28px -12px var(--c2)}
+.hero .date{font-size:11px;letter-spacing:.06em;opacity:.8;grid-column:1/-1}
+.hero h2{font-size:26px;line-height:1.1;font-weight:800;margin:2px 0 8px}
+.hero p{font-size:13px;opacity:.92;line-height:1.45}
+.hero .acts{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-top:14px}
+.hero .side{display:flex;flex-direction:column;gap:10px}
+.glass{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:14px;padding:10px 12px}
+.glass small{display:block;font-size:10px;opacity:.85;letter-spacing:.04em}
+.glass b{display:block;font-size:22px;margin-top:2px}
+.glass i{font-style:normal;font-size:11px;opacity:.85}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:11px;font-weight:700;font-size:13px;background:var(--acc);color:#fff}
+.btn.white{background:#fff;color:#b8400a}
+.btn.ghost{background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35)}
+.btn.line{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:7px 11px;font-size:12px}
+.btn:disabled{opacity:.45}
+.stat{display:flex;flex-direction:column;gap:6px}
+.stat .ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;margin-bottom:6px}
+.stat b{font-size:30px;font-weight:800;line-height:1}
+.stat span{font-size:12px;font-weight:700;color:var(--mut);letter-spacing:.04em;text-transform:uppercase}
+.stat small{font-size:12px;color:var(--mut)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sec{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec h3{font-size:16px;font-weight:700}
+.link{color:var(--acc);font-weight:700;font-size:13px}
+.big{text-align:center;padding:6px 0}
+.big b{font-size:44px;font-weight:800;background:linear-gradient(90deg,var(--c1),var(--c2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--tint);color:var(--mut)}
+.pill.ok{background:#e3f6ee;color:var(--ok)}.pill.bad{background:#fdeaea;color:var(--bad)}.pill.warn{background:#fff3d6;color:var(--warn)}.pill.pu{background:#efe8fc;color:var(--c1)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:10px}
+.mini b{display:block;font-size:22px}.mini span{font-size:11px;color:var(--mut)}
+.bar{height:8px;border-radius:9px;background:var(--tint);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:9px;background:var(--ok)}
+.kv{display:flex;justify-content:space-between;font-size:13px;margin:10px 0 6px}
+.ring{--p:70;--col:var(--ok);width:46px;height:46px;border-radius:50%;background:conic-gradient(var(--col) calc(var(--p)*1%),var(--tint) 0);display:grid;place-items:center;flex:none}
+.ring span{width:35px;height:35px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:11px;font-weight:800}
+.trow{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--line)}
+.trow:first-child{border-top:0;padding-top:4px}
+.trow h4{font-size:15px;font-weight:700}
+.trow p{font-size:12px;color:var(--mut);margin:3px 0 8px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.search{display:flex;gap:8px}
+.search label{flex:1;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 12px;color:var(--mut)}
+.search input{border:0;background:none;outline:0;padding:11px 0;width:100%;font-size:14px}
+.chips{display:flex;gap:8px;overflow:auto;padding-bottom:2px}
+.chip{padding:7px 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:12px;font-weight:700;white-space:nowrap;color:var(--mut)}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.pager{display:flex;justify-content:center;align-items:center;gap:14px;font-size:13px;color:var(--mut);padding-top:12px;border-top:1px solid var(--line)}
+.cover{height:130px;border-radius:12px;background:linear-gradient(135deg,var(--c1),var(--c2) 60%,var(--c3));display:flex;align-items:flex-end;padding:12px;color:#fff;font-weight:800;font-size:22px;margin-bottom:12px;position:relative}
+.cover em{position:absolute;top:10px;left:10px;font-style:normal;font-size:11px;font-weight:700;background:rgba(255,255,255,.25);padding:3px 9px;border-radius:99px}
+.person{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:6px 0 10px}
+.av{width:26px;height:26px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.folder{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.folder .fi{width:38px;height:38px;border-radius:10px;background:#fff0e3;color:var(--acc);display:grid;place-items:center;flex:none}
+.folder b{display:block;font-size:14px}.folder small{color:var(--mut);font-size:12px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.badge{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.lrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.lrow:first-child{border-top:0}
+.rk{width:30px;height:30px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.lrow.me{background:#fff3e8;margin:0 -8px;padding:11px 8px;border-radius:10px}
+html[data-dark] .lrow.me{background:#2d2231}
+.gold{background:linear-gradient(135deg,#fff8e1,#fff1c7);border-color:#f1d36b;color:#3b2f00}
+.q h3{font-size:18px;line-height:1.35;margin:10px 0 16px}
+.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:13px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card);font-size:14px}
+.opt i{width:26px;height:26px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px;flex:none}
+.opt.sel{border-color:var(--acc);background:#fff3e8;color:#17141f}
+.opt.right{border-color:var(--ok);background:#e3f6ee;color:#0d6e49}
+.opt.wrong{border-color:var(--bad);background:#fdeaea;color:#a02126}
+.empty{text-align:center;color:var(--mut);padding:28px 10px;font-size:14px}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.f{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--mut)}
+.f input:not([type=checkbox]):not([type=color]),.f select,.f textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink);width:100%}
+.f input[type=color]{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px}
+.sw{display:flex;align-items:center;gap:10px;font-size:14px;padding:8px 0}
+.sw input{width:18px;height:18px;accent-color:var(--acc)}
+.ov{position:fixed;inset:0;background:rgba(10,8,18,.5);z-index:40;display:flex;justify-content:flex-start}
+.drawer{width:292px;max-width:84%;background:var(--card);height:100%;display:flex;flex-direction:column;animation:slide .22s ease-out}
+@keyframes slide{from{transform:translateX(-100%)}}
+.drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;background:linear-gradient(90deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo .lg{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--c1),var(--c3));display:grid;place-items:center;color:#fff;font-size:11px;-webkit-text-fill-color:#fff}
+.logo img{width:30px;height:30px;border-radius:9px;object-fit:cover}
+.nav{flex:1;overflow:auto;padding:10px}
+.nav button{display:flex;gap:14px;align-items:center;width:100%;padding:12px;border-radius:11px;font-size:14px;font-weight:600;color:var(--mut);text-align:left}
+.nav button.on{background:#fff0e3;color:var(--acc)}
+html[data-dark] .nav button.on{background:#32232a}
+.me-box{display:flex;gap:11px;align-items:center;padding:14px 16px;border-top:1px solid var(--line);font-size:13px}
+.me-box small{display:block;color:var(--mut);font-size:11px;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.ava{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.sheet{position:fixed;inset:auto 0 0 0;margin:0 auto;max-width:520px;height:92dvh;background:var(--card);border-radius:22px 22px 0 0;z-index:50;display:flex;flex-direction:column;animation:up .24s ease-out}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet .sh{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 8px}
+.sheet .sh h2{font-size:18px}
+.tabs{display:flex;gap:6px;overflow:auto;padding:4px 18px 10px;border-bottom:1px solid var(--line)}
+.sb{flex:1;overflow:auto;padding:16px 18px 30px}
+.rowed{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.rowed .rh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--mut);font-size:12px}
+.rowed .rh button{color:var(--bad);padding:4px}
+.hint{font-size:12px;color:var(--mut);margin:0 0 12px;line-height:1.5}
+textarea.code{min-height:150px;font-family:ui-monospace,monospace;font-size:12px}
+.toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:#17141f;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:70;max-width:86%;text-align:center}
+.login{min-height:100dvh;display:grid;place-items:center;padding:24px}
+.login .card{width:100%;max-width:380px;padding:26px}
+.login h2{font-size:24px;margin:16px 0 4px}
+.login p{color:var(--mut);font-size:14px;margin-bottom:18px}
+@media (prefers-reduced-motion:reduce){.drawer,.sheet{animation:none}}
+@media (max-width:360px){.hero{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="pnl"></div>
+<div id="tst"></div>
+
+<script>
+/* ============ ICONS ============ */
+const ICON={
+menu:'M4 6h16M4 12h16M4 18h16',moon:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
+bell:'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
+gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+dashboard:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',book:'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z',
+bolt:'M13 2 3 14h9l-1 8 10-12h-9z',file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+chart:'M18 20V10M12 20V4M6 20v-6',trophy:'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
+chat:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',note:'M4 4h16v16H4zM8 9h8M8 13h8M8 17h5',
+video:'M23 7l-7 5 7 5zM1 5h15v14H1z',paper:'M2 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8z',
+mail:'M4 4h16v16H4zM4 6l8 7 8-7',logout:'M9 21H5V3h4M16 17l5-5-5-5M21 12H9',folder:'M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+x:'M18 6 6 18M6 6l12 12',plus:'M12 5v14M5 12h14',trash:'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',search:'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
+refresh:'M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5',eye:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+check:'M20 6 9 17l-5-5',target:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',list:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+left:'M15 18l-6-6 6-6',right:'M9 18l6-6-6-6'};
+const I=(n,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICON[n]||''}"/></svg>`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s);
+const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+/* ============ DEFAULT DATA (sab kuch customize ho sakta hai) ============ */
+function seed(){
+  return{
+  brand:{name:'My Academy',short:'MA',logo:'',c1:'#7c2ddb',c2:'#e8399b',c3:'#ff7a1a',acc:'#f97316',dark:false,footer:'All rights reserved.'},
+  user:{name:'Student',email:'',points:0,level:'Beginner',hours:'0h',weekly:0},
+  route:'dashboard',
+  menu:[
+    {id:'dashboard',label:'Dashboard',icon:'dashboard',on:true},{id:'courses',label:'My Courses',icon:'book',on:true},
+    {id:'create',label:'Create Practice Test',icon:'bolt',on:true},{id:'history',label:'Test History',icon:'file',on:true},
+    {id:'reports',label:'My MCQ Reports',icon:'chart',on:true},{id:'leaderboard',label:'Leaderboard',icon:'trophy',on:true},
+    {id:'community',label:'Community',icon:'chat',on:true},{id:'notes',label:'Notes',icon:'note',on:true},
+    {id:'videos',label:'Videos',icon:'video',on:true},{id:'papers',label:'Past Papers',icon:'paper',on:true},
+    {id:'messages',label:'Messages',icon:'mail',on:true}],
+  subjects:[],assigned:[],courses:[],folders:[],papers:[],notes:[],messages:[],board:[],posts:[],
+  community:{replies:0,helpful:0},tests:[],questions:[]
+  };
+}
+let S=seed();
+let ui={drawer:false,panel:false,tab:'brand',col:'courses',hp:1,hf:'All',hq:'',vq:'',vgrid:true,lb:'All',qf:'All',qlim:15};
+let run=null;
+
+/* ============ ONLINE DATABASE/API ============ */
+const API_BASE='';
+const OWNED=['assigned','courses','folders','papers','notes','messages','questions'];
+const GLOBAL=['brand','menu','subjects','board'];
+const clone=o=>JSON.parse(JSON.stringify(o));
+const uid=()=>'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const newDB=()=>{const x=seed(),sh={};GLOBAL.concat(OWNED).forEach(k=>sh[k]=x[k]);sh.posts=x.posts;return{v:1,accounts:[],shared:sh,progress:{},session:null}};
+let DB=newDB();
+let onlineReady=false, saveTimer=null;
+async function api(path,opts={}){const r=await fetch(API_BASE+path,{credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})},...opts});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Network request failed');return d}
+async function hydrate(){try{const d=await api('/api/state');DB=d;onlineReady=true;return true}catch(e){onlineReady=false;return false}}
+function saveDB(){ if(!onlineReady)return; clearTimeout(saveTimer); saveTimer=setTimeout(async()=>{try{const a=me();if(!a)return;if(a.role==='admin')await api('/api/admin/shared',{method:'PUT',body:JSON.stringify({data:DB.shared})});else await api('/api/progress',{method:'PUT',body:JSON.stringify({data:DB.progress[a.id]||{}})});}catch(e){console.warn(e)}},350); }
+async function saveNow(){clearTimeout(saveTimer);if(!onlineReady)return;const a=me();if(!a)return;if(a.role==='admin')await api('/api/admin/shared',{method:'PUT',body:JSON.stringify({data:DB.shared})});else await api('/api/progress',{method:'PUT',body:JSON.stringify({data:DB.progress[a.id]||{}})});}
+const me=()=>DB.accounts.find(a=>a.id===DB.session)||null;
+const role=()=>me()?.role||'';
+const isStaff=()=>role()==='admin';
+const isDark=()=>role()!=='admin'&&S.user&&S.user.dark!==undefined?S.user.dark:S.brand.dark;
+const ckeys=()=>OWNED.concat('board');
+const GRADES=['Class 1','Class 2','Class 3','Class 4','Class 5','Class 6','Class 7','Class 8','Class 9','Matric'];
+const gradeSel=(at,cur,blank)=>`<select ${at}><option value="">${blank}</option>${GRADES.map(g=>`<option ${cur===g?'selected':''}>${g}</option>`).join('')}</select>`;
+/* Student ko ye item dikhna chahiye ya nahi (class/student assign) */
+function visibleTo(i,acc){
+  const to=i.to||'all';
+  if(to.startsWith('grade:'))return acc.grade===to.slice(6);
+  if(to.startsWith('stu:'))return to.slice(4)===acc.id;
+  return true;
+}
+function toOptions(){
+  const o=[['all','All students']];
+  GRADES.forEach(g=>o.push(['grade:'+g,g+' (whole class)']));
+  DB.accounts.filter(a=>a.role==='student').forEach(a=>o.push(['stu:'+a.id,a.name+(a.grade?' ('+a.grade+')':'')]));
+  return o;
+}
+function hintAssigned(row){
+  const have=S.questions.filter(q=>q.subject===row.subject&&q.q).length,need=+row.count||0;
+  return `<p class="hint" style="margin:0">The bank has ${have} MCQs in ${esc(row.subject)}. ${need>have?'Add '+(need-have)+' more MCQs, or lower the number above.':'Students get '+need+' random MCQs from them.'}</p>`;
+}
+const firstTab=()=>'accounts';
+function chkAcc(n,u,p){
+  if(!n)return 'Enter a name';
+  if(!/^[a-z0-9_.-]{3,20}$/.test(u))return 'Username: 3-20 letters, numbers, dot, dash or underscore';
+  if(DB.accounts.some(a=>a.username===u))return 'That username is already taken';
+  if(!/^(?=.{10,128}$)(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).*$/.test(p))return 'Password must be 10+ characters with uppercase, lowercase, number and symbol';
+  return '';
+}
+/* Login karne walay ke hisaab se S (screen ka data) banata hai */
+function buildS(acc){
+  const sh=DB.shared,x=seed();
+  GLOBAL.forEach(k=>x[k]=clone(sh[k]));
+  x.posts=clone(sh.posts||[]);
+  OWNED.forEach(k=>{
+    let l=sh[k]||[];
+    if(acc.role==='student'&&k!=='questions')l=l.filter(i=>visibleTo(i,acc));
+    x[k]=clone(l);
+  });
+  const pr=DB.progress[acc.id]||{};
+  x.user=Object.assign(x.user,pr.user||{},{name:acc.name,email:({admin:'Admin',student:'Student'})[acc.role]+' - @'+acc.username+(acc.grade?' - '+acc.grade:'')});
+  x.tests=clone(pr.tests||[]);x.community=pr.community||{replies:0,helpful:0};
+  x.route=acc.role==='student'?'dashboard':'home';
+  return x;
+}
+/* Screen ka data wapas database mein save karta hai (role ke hisaab se) */
+function persist(){
+  const a=me();if(!a)return;
+  const sh=DB.shared;
+  if(a.role==='admin'){GLOBAL.concat(OWNED).forEach(k=>sh[k]=clone(S[k]))}
+  else{DB.progress[a.id]={user:clone(S.user),tests:clone(S.tests),community:clone(S.community)};sh.posts=clone(S.posts)}
+  saveDB();
+}
+async function doLogin(adminOnly){
+  const u=$('#lu').value.trim().toLowerCase(),p=$('#lp').value.trim();
+  try{const d=await api('/api/login',{method:'POST',body:JSON.stringify({username:u,password:p,adminOnly})});DB=d;onlineReady=true;run=null;nav.length=0;const a=me();S=buildS(a);ui.panel=false;ui.drawer=false;ui.tab=firstTab();ui.col='courses';apply();renderPanel();render();}
+  catch(e){toast(e.message)}
+}
+function signIn(a){DB.session=a.id;run=null;nav.length=0;S=buildS(a);ui.panel=false;ui.drawer=false;ui.tab=firstTab();ui.col='courses';apply();renderPanel();render();}
+/* Admin accounts badalta hai: pehle save, phir badlav, phir screen dobara banao */
+function accOp(fn){
+  persist();fn();saveDB();
+  const r=S.route;S=buildS(me());S.route=r;
+  renderPanel();render();
+}
+
+/* ============ HELPERS ============ */
+const done=()=>S.tests.filter(t=>t.status!=='In Progress');
+const stats=()=>{const d=done();const c=d.reduce((a,t)=>a+t.correct,0),n=d.reduce((a,t)=>a+t.total,0);
+  return{completed:d.length,progress:S.tests.length-d.length,solved:n,correct:c,wrong:n-c,acc:n?Math.round(c/n*1000)/10:0,avg:d.length?Math.round(d.reduce((a,t)=>a+t.correct/t.total*100,0)/d.length):0}};
+const rank=()=>1+S.board.filter(b=>b.score>S.user.points).length;
+const total=()=>S.board.length+1;
+const topPct=()=>Math.round(rank()/total()*1000)/10;
+const initials=n=>String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const rcol=p=>p>=75?'var(--ok)':p>=60?'var(--acc)':'var(--bad)';
+const ring=(p)=>`<div class="ring" style="--p:${p};--col:${rcol(p)}"><span>${p}%</span></div>`;
+function toast(m){const t=$('#tst');t.innerHTML=`<div class="toast" role="status">${esc(m)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>t.innerHTML='',2200)}
+function apply(){const r=document.documentElement.style,b=S.brand;
+  r.setProperty('--c1',b.c1);r.setProperty('--c2',b.c2);r.setProperty('--c3',b.c3);r.setProperty('--acc',b.acc);
+  isDark()?document.documentElement.setAttribute('data-dark',''):document.documentElement.removeAttribute('data-dark');
+  document.title=b.name+' - Student Portal'}
+/* ============ BACK NAVIGATION (app ka back button + phone ka back button) ============ */
+const nav=[];let hOK=true;
+const histPush=()=>{try{history.pushState({p:1},'')}catch(e){hOK=false}};
+const go=r=>{if(r!==S.route){nav.push(S.route);histPush()}S.route=r;ui.drawer=false;window.scrollTo(0,0);render()};
+function goBack(){
+  if(ui.panel){ui.panel=false;renderPanel();histPush();return}
+  if(ui.drawer){ui.drawer=false;render();histPush();return}
+  if(S.route==='run'&&run&&run.view==='take'){
+    if(confirm('Quit this test? Your answers will be lost.')){run=null;S.route=nav.pop()||'dashboard';window.scrollTo(0,0);render()}else histPush();
+    return;
+  }
+  if(nav.length){S.route=nav.pop();window.scrollTo(0,0);render()}
+}
+window.addEventListener('popstate',()=>{if(S.route!=='login')goBack()});
+const titleOf=r=>({dashboard:'',run:'Practice Test',review:'Review'}[r]??(S.menu.find(m=>m.id===r)?.label||''));
+
+/* ============ PAGES ============ */
+function logoHTML(){const b=S.brand;return `<span class="logo">${b.logo?`<img src="${esc(b.logo)}" alt="">`:`<span class="lg">${esc(b.short)}</span>`}${esc(b.name)}</span>`}
+
+function pgDashboard(){
+  const s=stats(),dt=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+  const last=done()[0];
+  const cats=S.subjects.map(sub=>{const d=done().filter(t=>t.subject===sub),n=d.reduce((a,t)=>a+t.total,0),c=d.reduce((a,t)=>a+t.correct,0);return{sub,n,p:n?Math.round(c/n*100):0}}).filter(x=>x.n);
+  return `
+  <section class="hero"><div class="date">${esc(dt)}</div>
+    <div><h2>Salam, ${esc(S.user.name)}</h2><p>${s.completed} tests completed &middot; ${s.solved} MCQs answered &middot; ${s.acc}% accuracy.</p>
+      <div class="acts"><button class="btn white" data-a="go" data-r="create">${I('bolt',16)} Create Practice Test</button>
+      <button class="btn ghost" data-a="go" data-r="history">${I('chart',16)} Test History</button></div></div>
+    <div class="side"><div class="glass"><small>LEADERBOARD</small><b>#${rank()}</b><i>Top ${topPct()}%</i></div>
+      <div class="glass"><small>POINTS</small><b>${S.user.points}</b><i>${esc(S.user.level)}</i></div></div></section>
+  <div class="card stat"><div class="ico" style="background:#efe8fc;color:var(--c1)">${I('check')}</div><b>${s.completed}</b><span>Tests completed</span><small>${s.progress} in progress</small></div>
+  <div class="card stat"><div class="ico" style="background:#fff0e3;color:var(--acc)">${I('bolt')}</div><b>${s.solved}</b><span>MCQs solved</span><small>+${S.user.weekly} this week</small></div>
+  <div class="grid2"><div class="card stat"><div class="ico" style="background:#e3f6ee;color:var(--ok)">${I('target')}</div><b>${s.acc}%</b><span>Accuracy</span><small>${s.correct} correct &middot; ${s.wrong} wrong</small></div>
+  <div class="card stat"><div class="ico" style="background:#e6f0fd;color:#2d6fd6">${I('clock')}</div><b style="font-size:22px">${esc(S.user.hours)}</b><span>Study time</span><small>total</small></div></div>
+  ${last?`<div class="card"><div class="sec"><h3>Latest test</h3><button class="link" data-a="go" data-r="history">View all</button></div>${testRow(last,true)}</div>`:''}
+  <div class="card"><div class="sec"><h3>Standing</h3><button class="link" data-a="go" data-r="leaderboard">Full leaderboard</button></div>
+    <div class="big"><b>#${rank()}</b><div style="font-size:13px;color:var(--mut)">of ${total()} students</div><span class="pill ok" style="margin-top:8px">Top ${topPct()}%</span></div>
+    <div class="grid2" style="margin-top:12px"><div class="card" style="background:var(--tint);text-align:center;padding:12px"><small style="color:var(--mut)">Score</small><br><b style="font-size:22px">${S.user.points}</b></div>
+    <div class="card" style="background:var(--tint);text-align:center;padding:12px"><small style="color:var(--mut)">Solved</small><br><b style="font-size:22px">${s.solved}</b></div></div></div>
+  <div class="card"><div class="sec"><h3>Community</h3><button class="link" data-a="go" data-r="community">Open</button></div>
+    <div class="mini"><div><b>${S.posts.length}</b><span>Posts</span></div><div><b>${S.community.replies}</b><span>Replies</span></div><div><b>${S.community.helpful}</b><span>Helpful</span></div></div></div>
+  <div class="card"><div class="sec"><h3>MCQ practice insights</h3></div>
+    <div class="kv"><span>Overall accuracy</span><b>${s.acc}%</b></div><div class="bar"><i style="width:${s.acc}%"></i></div>
+    ${cats.map(c=>`<div class="kv"><span>${esc(c.sub)}</span><b>${c.p}%</b></div><div class="bar"><i style="width:${c.p}%;background:${rcol(c.p)}"></i></div>`).join('')}</div>`;
+}
+
+function testRow(t,solo){
+  const p=t.status==='In Progress'?Math.round(t.correct/t.total*100):Math.round(t.correct/t.total*100);
+  const pill=t.status==='Passed'?'<span class="pill ok">Passed</span>':t.status==='Failed'?'<span class="pill bad">Failed</span>':'<span class="pill warn">In Progress</span>';
+  return `<div class="trow">${ring(p)}<div style="flex:1;min-width:0"><div class="tags"><h4>${esc(t.title)}</h4>${pill}</div>
+    <p>${t.status==='In Progress'?`${t.correct}/${t.total} answered`:`${t.correct}/${t.total} correct`} &middot; ${esc(t.bank)}</p>
+    <div class="tags"><span class="pill pu">${esc(t.subject)}</span><span class="pill">${esc(t.date)}</span></div>
+    <div class="acts"><button class="btn line sm" data-a="review" data-id="${esc(t.id)}">${I('chart',14)} Results</button>
+    <button class="btn line sm" data-a="review" data-id="${esc(t.id)}">${I('eye',14)} Review</button>
+    <button class="btn sm" data-a="retake" data-id="${esc(t.id)}">Retake</button></div></div></div>`;
+}
+
+function pgHistory(){
+  const s=stats();
+  let list=S.tests.filter(t=>(ui.hf==='All'||t.status===ui.hf)&&(!ui.hq||(t.title+t.subject+t.bank).toLowerCase().includes(ui.hq.toLowerCase())));
+  const pages=Math.max(1,Math.ceil(list.length/5));ui.hp=Math.min(ui.hp,pages);
+  const view=list.slice((ui.hp-1)*5,ui.hp*5);
+  return `<button class="btn" style="align-self:flex-start" data-a="go" data-r="create">${I('bolt',16)} New practice test</button>
+  <div class="grid2"><div class="card stat"><span>Total tests</span><b>${S.tests.length}</b><small>all-time attempts</small></div>
+  <div class="card stat"><span>Completed</span><b>${s.completed}</b><small>${S.tests.length?Math.round(s.completed/S.tests.length*100):0}% completion</small></div>
+  <div class="card stat"><span>Avg score</span><b>${s.avg}%</b><small>across completed</small></div>
+  <div class="card stat"><span>In progress</span><b>${s.progress}</b><small>finish them</small></div></div>
+  <div class="search"><label>${I('search',16)}<input id="hq" placeholder="Search test, subject, bank" value="${esc(ui.hq)}" aria-label="Search tests"></label></div>
+  <div class="chips">${['All','Passed','Failed','In Progress'].map(f=>`<button class="chip ${ui.hf===f?'on':''}" data-a="hf" data-v="${f}">${f}</button>`).join('')}</div>
+  <div class="card">${view.length?view.map(t=>testRow(t)).join(''):`<div class="empty"><b>No tests found</b>Change the filter or create a new practice test.</div>`}
+  <div class="pager"><button class="ib" data-a="hp" data-v="-1" ${ui.hp<=1?'disabled':''} aria-label="Previous page">${I('left')}</button>Page ${ui.hp} of ${pages}<button class="ib" data-a="hp" data-v="1" ${ui.hp>=pages?'disabled':''} aria-label="Next page">${I('right')}</button></div></div>`;
+}
+
+function pgCourses(){
+  return S.courses.length?S.courses.map(c=>{const p=c.tests?Math.round(c.done/c.tests*100):0;
+    const btn=p>=100?'Review':p>0?'Continue':'Start';
+    return `<div class="card"><div class="cover"><em>${esc(c.tag)}</em>${esc(c.title)}</div>
+    <h3 style="font-size:17px">${esc(c.title)}</h3><div class="person"><span class="av">${esc(initials(c.teacher))}</span>${esc(c.teacher)}</div>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${esc(c.dates)} &middot; ${c.tests} tests</div>
+    <div class="kv" style="margin-top:0"><span>Progress</span><b>${p}% (${c.done}/${c.tests})</b></div><div class="bar"><i style="width:${p}%"></i></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn sm" data-a="go" data-r="create">${btn}</button></div></div>`}).join('')
+    :`<div class="card empty"><b>No courses yet</b>${isStaff()?'Add courses from the panel &gt; Content.':'Admin has not added courses yet.'}</div>`;
+}
+
+const availOf=sub=>S.questions.filter(q=>q.subject===sub&&q.q).length;
+const fmtT=ms=>{const t=Math.max(0,Math.round(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+function pgCreate(){
+  const first=S.subjects.find(x=>availOf(x))||S.subjects[0]||'';
+  if(!S.subjects.length)return `<div class="card empty"><b>No subjects yet</b>${isStaff()?'Open the gear icon &gt; Brand to add subjects, then add MCQs in Content &gt; Question bank.':'Admin has not set up subjects yet.'}</div>`;
+  const as=S.assigned.length?`<div class="card"><div class="sec"><h3>Assigned tests</h3></div>${S.assigned.map((a,i)=>`<div class="lrow"><span class="badge" style="background:#fff0e3;color:var(--acc)">${I('file',20)}</span><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(a.title)}</b><div style="font-size:12px;color:var(--mut)">${esc(a.subject)} &middot; ${a.count} MCQs${a.minutes?` &middot; ${a.minutes} min`:''}</div></div><button class="btn sm" data-a="startAssigned" data-i="${i}">Start</button></div>`).join('')}</div>`:'';
+  return as+`<div class="card"><h3 style="font-size:18px;margin-bottom:4px">Create your own test</h3>
+  <p class="hint">Pick a subject and how many MCQs you want. Questions come from the question bank.</p>
+  <label class="f"><span>Subject</span><select id="cs">${S.subjects.map(x=>`<option ${x===first?'selected':''} value="${esc(x)}">${esc(x)} (${availOf(x)} MCQs)</option>`).join('')}</select></label>
+  <label class="f"><span>Number of MCQs</span><input id="cn" type="number" min="1" max="${availOf(first)}" value="${Math.min(20,availOf(first)||20)}"></label>
+  <p class="hint" id="avh">${availOf(first)} MCQs available in ${esc(first)}</p>
+  <label class="f"><span>Time limit in minutes (0 = no limit)</span><input id="ct" type="number" min="0" value="0"></label>
+  <label class="f"><span>Test name</span><input id="cb" value="My Practice Test"></label>
+  <button class="btn" style="width:100%;justify-content:center" data-a="start">Start test</button></div>`;
+}
+
+function pgRun(){
+  if(!run)return `<div class="empty"><b>No test running</b></div>`;
+  if(run.view==='result'){
+    const t=run.t,p=Math.round(t.correct/t.total*100);
+    return `<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;margin-bottom:12px"><div class="ring" style="--p:${p};--col:${rcol(p)};width:96px;height:96px"><span style="width:76px;height:76px;font-size:22px">${p}%</span></div></div>
+    <h2 style="font-size:22px">${t.status==='Passed'?'Test passed':'Keep practising'}</h2>
+    <p class="hint" style="margin-top:6px">${t.correct} correct, ${t.total-t.correct} wrong out of ${t.total}. You earned ${t.correct} points.</p>
+    <div class="acts" style="justify-content:center"><button class="btn" data-a="review" data-id="${esc(t.id)}">Review answers</button><button class="btn line" data-a="go" data-r="history">Test history</button></div></div>`;
+  }
+  const q=run.qs[run.i],sel=run.ans[run.i],last=run.i===run.qs.length-1;
+  return `<div class="card q"><div class="kv" style="margin:0 0 8px"><span>${esc(run.subject)} ${run.end?`<span class="pill warn" id="tmr">${fmtT(run.end-Date.now())}</span>`:''}</span><b>${run.i+1} / ${run.qs.length}</b></div>
+  <div class="bar"><i style="width:${(run.i+1)/run.qs.length*100}%;background:var(--acc)"></i></div>
+  <h3>${esc(q.q)}</h3>
+  ${[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="pick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</button>`).join('')}
+  <div style="display:flex;justify-content:space-between;margin-top:6px"><button class="btn line" data-a="quit">Quit</button>
+  <button class="btn" data-a="next" ${sel?'':'disabled'}>${last?'Finish':'Next'}</button></div></div>`;
+}
+
+function pgReview(){
+  const t=S.tests.find(x=>x.id===run?.rid);
+  if(!t||!t.qs)return `<div class="card empty"><b>No answer data</b>Review is available for tests you take inside this portal.</div>`;
+  return `<div class="card"><div class="sec"><h3>${esc(t.title)}</h3><span class="pill ${t.status==='Passed'?'ok':'bad'}">${t.correct}/${t.total}</span></div></div>`+
+  t.qs.map((q,i)=>{const a=t.ans[i];return `<div class="card q"><div class="kv" style="margin:0"><span>Question ${i+1}</span>${a===q.ans?'<span class="pill ok">Correct</span>':'<span class="pill bad">Wrong</span>'}</div>
+  <h3>${esc(q.q)}</h3>${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===a?'wrong':''}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</div>`).join('')}</div>`}).join('');
+}
+
+function pgReports(){
+  const s=stats();
+  if(!S.tests.length)return `<div class="card empty"><b>No reports yet</b>Take a practice test and your accuracy will show here.</div>`;
+  return `<div class="card"><div class="sec"><h3>Overall</h3></div><div class="kv" style="margin-top:0"><span>${s.correct} correct &middot; ${s.wrong} wrong</span><b>${s.acc}%</b></div><div class="bar"><i style="width:${s.acc}%"></i></div></div>`+
+  S.subjects.map(sub=>{const d=done().filter(t=>t.subject===sub),n=d.reduce((a,t)=>a+t.total,0),c=d.reduce((a,t)=>a+t.correct,0),p=n?Math.round(c/n*100):0;
+    return `<div class="card"><div class="kv" style="margin:0 0 8px"><b>${esc(sub)}</b><span>${d.length} tests</span></div><div class="kv" style="margin-top:0"><span>${c}/${n} correct</span><b>${p}%</b></div><div class="bar"><i style="width:${p}%;background:${rcol(p)}"></i></div></div>`}).join('');
+}
+
+function pgLeaderboard(){
+  const me={name:S.user.name+' (You)',score:S.user.points,me:true};
+  const all=S.board.map(b=>({...b})).concat([{...me,acc:stats().acc,solved:stats().solved}]).sort((a,b)=>b.score-a.score);
+  const s=stats();
+  return `<div class="card" style="background:linear-gradient(135deg,#fff3e8,#f6eaff)"><div class="kv" style="margin:0;color:#17141f"><span>Your rank</span><b style="font-size:30px">#${rank()}</b></div>
+  <div class="mini" style="color:#17141f"><div><b>${S.user.points}</b><span>Score</span></div><div><b>${s.acc}%</b><span>Accuracy</span></div><div><b>${s.solved}</b><span>Solved</span></div></div></div>
+  <div class="chips">${['All','Week','Month','Improved','Subject'].map(f=>`<button class="chip ${ui.lb===f?'on':''}" data-a="lb" data-v="${f}">${f}</button>`).join('')}</div>
+  <div class="card">${all.map((b,i)=>`<div class="lrow ${b.me?'me':''}"><span class="rk">${i+1}</span><div style="flex:1"><b style="font-size:14px">${esc(b.name)}</b><div style="font-size:12px;color:var(--mut)">${b.acc}% accuracy &middot; ${b.solved} solved</div></div><b style="color:var(--acc)">${b.score}</b></div>`).join('')}</div>`;
+}
+
+function pgCommunity(){
+  return `<div class="card"><div class="mini" style="margin-top:0"><div><b>${S.posts.length}</b><span>Posts</span></div><div><b>${S.community.replies}</b><span>Replies</span></div><div><b>${S.community.helpful}</b><span>Helpful</span></div></div></div>
+  <div class="card"><label class="f"><span>Share a question or tip</span><textarea id="np" rows="3" placeholder="Write here"></textarea></label><button class="btn" data-a="post">Post</button></div>
+  <div class="card">${S.posts.length?S.posts.map(p=>`<div class="lrow" style="align-items:flex-start"><span class="av" style="background:var(--c1)">${esc(initials(p.name))}</span><div><b style="font-size:13px">${esc(p.name)}</b><div style="font-size:14px;margin-top:2px">${esc(p.text)}</div></div></div>`).join(''):`<div class="empty"><b>No posts yet</b>Be the first to post.</div>`}</div>`;
+}
+
+function linkAttr(u){return u?`data-a="open" data-u="${esc(u)}"`:`data-a="soft"`}
+function pgNotes(){return S.notes.length?`<div class="card">${S.notes.map(n=>`<button class="lrow" style="width:100%;text-align:left" ${linkAttr(n.url)}><span class="badge" style="background:#fff0e3;color:var(--acc)">${I('note',20)}</span><div style="flex:1"><b style="font-size:14px">${esc(n.title)}</b><div style="font-size:12px;color:var(--mut)">${esc(n.subject)}</div></div>${I('right',16)}</button>`).join('')}</div>`:`<div class="card empty"><b>No notes yet</b></div>`}
+function pgVideos(){
+  const list=S.folders.filter(f=>!ui.vq||f.name.toLowerCase().includes(ui.vq.toLowerCase()));
+  return `<div class="search"><label>${I('search',16)}<input id="vq" placeholder="Search videos" value="${esc(ui.vq)}" aria-label="Search videos"></label>
+  <button class="btn line" data-a="vgrid" aria-label="Toggle layout">${I(ui.vgrid?'grid':'list',18)}</button></div>
+  <div class="${ui.vgrid?'':''}" style="display:${ui.vgrid?'grid':'flex'};grid-template-columns:1fr;flex-direction:column;gap:10px">${list.length?list.map(f=>`<button class="folder" ${linkAttr(f.url)}><span class="fi">${I('folder',20)}</span><span><b>${esc(f.name)}</b><small>${f.count} videos</small></span></button>`).join(''):`<div class="card empty"><b>Nothing found</b></div>`}</div>`;
+}
+function pgPapers(){return S.papers.length?S.papers.map(p=>`<button class="card" style="display:flex;gap:12px;align-items:center;text-align:left" ${linkAttr(p.url)}><span class="badge">${esc(initials(p.name))}</span><span style="flex:1"><b>${esc(p.name)}</b><div style="font-size:12px;color:var(--mut);margin:2px 0 4px">${esc(p.desc)}</div><span class="link">View papers</span></span></button>`).join(''):`<div class="card empty"><b>No papers yet</b></div>`}
+function pgMessages(){return S.messages.length?`<div class="card">${S.messages.map(m=>`<div class="lrow" style="align-items:flex-start"><span class="av" style="background:var(--acc)">${esc(initials(m.from))}</span><div><b style="font-size:13px">${esc(m.from)}</b><div style="font-size:14px;margin-top:2px">${esc(m.text)}</div></div></div>`).join('')}</div>`:`<div class="card empty"><b>Inbox is empty</b></div>`}
+
+const PAGES={dashboard:pgDashboard,courses:pgCourses,create:pgCreate,history:pgHistory,reports:pgReports,leaderboard:pgLeaderboard,community:pgCommunity,notes:pgNotes,videos:pgVideos,papers:pgPapers,messages:pgMessages,run:pgRun,review:pgReview};
+
+/* ============ RENDER ============ */
+function renderLogin(){
+  const first=!DB.accounts.length,w='style="width:100%;justify-content:center"';
+  $('#root').innerHTML=`<div class="login"><div class="card">${logoHTML()}`+(first?
+  `<h2>Set up your portal</h2><p>Create the first Admin account. This creates the real online administrator account.</p>
+  <label class="f"><span>Your name</span><input id="sn" autocomplete="name"></label>
+  <label class="f"><span>Username</span><input id="su" autocomplete="username" autocapitalize="none"></label>
+  <label class="f"><span>Password</span><input id="sp" type="password" autocomplete="new-password"></label>
+  <p class="hint">Password: 10+ characters, uppercase, lowercase, number and symbol.</p>
+  <button class="btn" ${w} data-a="setup">Create Admin account</button>`
+  :(()=>{
+    const lt=ui.lt||'login';
+    const tabs=`<div class="chips" style="margin:14px 0 18px"><button class="chip ${lt==='login'?'on':''}" data-a="ltab" data-v="login">Student Login</button><button class="chip ${lt==='admin'?'on':''}" data-a="ltab" data-v="admin">Admin Login</button></div>`;
+    const adm=lt==='admin';
+    return `${tabs}<h2>${adm?'Admin login':'Student login'}</h2><p>${adm?'Sign in with your Admin account.':'Sign in with the account provided by your Admin.'}</p>
+    <label class="f"><span>Username</span><input id="lu" autocomplete="username" autocapitalize="none"></label>
+    <label class="f"><span>Password</span><input id="lp" type="password" autocomplete="current-password"></label>
+    <button class="btn" ${w} data-a="${adm?'alogin':'login'}">${adm?'Sign in as Admin':'Sign in'}</button>
+    <p class="hint" style="margin-top:14px">Forgot your password? Contact the portal Admin to reset it.</p>`;
+  })())+`</div></div>`;
+}
+function render(){
+  if(S.route==='login'){renderLogin();return}
+  const r=S.route,vis=isStaff()?staffMenu():S.menu.filter(m=>m.on);
+  const page=(isStaff()?staffPage(r):(PAGES[r]||PAGES.dashboard)());
+  $('#root').innerHTML=`<div class="app">
+  <header class="top">${nav.length?`<button class="ib" data-a="back" aria-label="Back">${I('left',22)}</button>`:''}<button class="ib" data-a="drawer" aria-label="Menu">${I('menu')}</button><h1>${esc(isStaff()?staffTitle(r):titleOf(r))}</h1>
+  <button class="ib" data-a="dark" aria-label="Toggle dark mode">${I('moon')}</button>
+  ${isStaff()?'':`<button class="ib" data-a="bell" aria-label="Notifications">${I('bell')}</button>`}</header>
+  <main>${page}</main>
+  <div class="foot">&copy; ${new Date().getFullYear()} <b>${esc(S.brand.name)}</b> &middot; ${esc(S.brand.footer)}</div></div>
+  ${ui.drawer?`<div class="ov" data-a="drawer"><nav class="drawer" aria-label="Main menu"><div class="dh">${logoHTML()}<button class="ib" data-a="drawer" aria-label="Close menu">${I('x')}</button></div>
+  <div class="nav">${vis.map(m=>`<button class="${r===m.id?'on':''}" data-a="go" data-r="${esc(m.id)}">${I(m.icon)}${esc(m.label)}</button>`).join('')}<button data-a="logout">${I('logout')}Logout</button></div>
+  <div class="me-box"><span class="ava">${esc(initials(S.user.name))}</span><div><b>${esc(S.user.name)}</b><small>${esc(S.user.email)}</small></div></div></nav></div>`:''}`;
+  const hq=$('#hq');if(hq&&document.activeElement!==hq&&ui.keepHq){hq.focus();hq.setSelectionRange(hq.value.length,hq.value.length)}
+  const vq=$('#vq');if(vq&&ui.keepVq){vq.focus();vq.setSelectionRange(vq.value.length,vq.value.length)}
+  ui.keepHq=ui.keepVq=false;
+  persist();
+}
+
+/* ============ STAFF SCREENS (Admin ke pages) ============ */
+const CNAME={questions:['Question bank','file'],assigned:['Tests','bolt'],folders:['Videos','video'],courses:['Courses','book'],notes:['Notes','note'],papers:['Past papers','paper'],messages:['Messages','mail'],board:['Leaderboard','trophy']};
+const CORDER=['questions','assigned','folders','courses','notes','papers','messages','board'];
+function staffMenu(){
+  const m=[{id:'home',label:'Dashboard',icon:'dashboard'},{id:'accounts',label:'Accounts',icon:'list'},{id:'results',label:'Student results',icon:'chart'}];
+  CORDER.forEach(k=>m.push({id:'c_'+k,label:CNAME[k][0],icon:CNAME[k][1]}));
+  m.push({id:'brand',label:'Brand and colours',icon:'gear'},{id:'menu',label:'Student menu',icon:'eye'},{id:'backup',label:'Backup',icon:'folder'});
+  return m;
+}
+const staffTitle=r=>r==='home'?'Admin dashboard':(staffMenu().find(m=>m.id===r)?.label||'');
+function stHome(){
+  const m=me(),stu=DB.accounts.filter(a=>a.role==='student');
+  const tests=stu.reduce((n,a)=>n+((DB.progress[a.id]&&DB.progress[a.id].tests)||[]).filter(t=>t.status!=='In Progress').length,0);
+  const cards=[[stu.length,'Students'],[S.questions.length,'MCQs'],[S.assigned.length,'Tests'],[tests,'Tests taken']];
+  return `<div class="hero" style="grid-template-columns:1fr"><div class="date">Admin</div><h2>Hello, ${esc(m.name)}</h2>
+    <p>You manage student accounts, content, colours and results for the whole portal.</p></div>
+  <div class="grid2">${cards.map(c=>`<div class="card stat"><b>${c[0]}</b><span>${c[1]}</span></div>`).join('')}</div>
+  <div class="card"><div class="sec"><h3>Quick actions</h3></div>${staffMenu().slice(1).map(l=>`<button class="lrow" style="width:100%;text-align:left" data-a="go" data-r="${l.id}"><span class="badge" style="background:#fff0e3;color:var(--acc)">${I(l.icon,20)}</span><b style="flex:1;font-size:14px">${l.label}</b>${I('right',16)}</button>`).join('')}</div>`;
+}
+function staffPage(r){
+  if(r.startsWith('c_')){const k=r.slice(2);if(ckeys().includes(k))return `<div class="card"><h3 style="font-size:18px;margin-bottom:10px">${CNAME[k][0]}</h3>${colEditor(k)}</div>`}
+  if(['results','accounts','brand','menu','backup'].includes(r)){ui.tab=r;return `<div class="card">${panelBody()}</div>`}
+  return stHome();
+}
+
+/* ============ CUSTOMIZE PANEL ============ */
+const SCHEMA={
+  courses:{label:'Courses',f:[['title','Title'],['tag','Tag (e.g. MDCAT 2026)'],['teacher','Instructor'],['dates','Dates'],['tests','Total tests','number'],['done','Tests done','number'],['to','Assign to','to']],blank:{to:'all',title:'New course',tag:'',teacher:'Admin',dates:'',tests:1,done:0}},
+  assigned:{label:'Tests',f:[['title','Test title'],['subject','Subject','subject'],['count','Number of MCQs','number'],['minutes','Time limit in minutes (0 = no limit)','number'],['to','Assign to','to']],blank:{to:'all',title:'New test',subject:'Biology',count:50,minutes:0}},
+  folders:{label:'Videos',f:[['name','Folder name'],['count','Number of videos','number'],['url','Link (optional)'],['to','Assign to','to']],blank:{to:'all',name:'New folder',count:0,url:''}},
+  papers:{label:'Past papers',f:[['name','Board / title'],['desc','Description'],['url','Link (optional)'],['to','Assign to','to']],blank:{to:'all',name:'New board',desc:'',url:''}},
+  notes:{label:'Notes',f:[['title','Title'],['subject','Subject'],['url','Link (optional)'],['to','Assign to','to']],blank:{to:'all',title:'New note',subject:'',url:''}},
+  messages:{label:'Messages',f:[['from','From'],['text','Message','area'],['to','Assign to','to']],blank:{to:'all',from:'Admin',text:''}},
+  board:{label:'Leaderboard',f:[['name','Name'],['score','Score','number'],['acc','Accuracy %','number'],['solved','Solved','number']],blank:{name:'New student',score:500,acc:70,solved:1000}},
+  questions:{label:'Question bank',f:[['subject','Subject','subject'],['q','Question','area'],['o1','Option A'],['o2','Option B'],['o3','Option C'],['o4','Option D'],['ans','Correct option (1-4)','number']],blank:{subject:'Biology',q:'',o1:'',o2:'',o3:'',o4:'',ans:1}},
+  tests:{label:'Test history',f:[['title','Title'],['subject','Subject','subject'],['bank','Bank'],['correct','Correct','number'],['total','Total','number'],['date','Date'],['status','Status','status']],blank:{title:'Test0001',subject:'Biology',bank:'Question Bank',correct:0,total:10,date:fmtDate(new Date()),status:'Passed'}}
+};
+const fld=(l,attrs,v,t='text')=>`<label class="f"><span>${l}</span><input type="${t}" ${attrs} value="${esc(v)}"></label>`;
+function splitLine(line){
+  if(line.includes('|'))return line.split('|');
+  if(line.includes('\t'))return line.split('\t');
+  const out=[];let cur='',q=false;
+  for(const ch of line){if(ch==='"')q=!q;else if(ch===','&&!q){out.push(cur);cur=''}else cur+=ch}
+  out.push(cur);return out;
+}
+function importMCQs(text,defSub){
+  let ok=0,bad=0;
+  String(text).split(/\r?\n/).forEach(line=>{
+    line=line.trim();if(!line)return;
+    let p=splitLine(line).map(x=>x.trim());
+    if(p.length===6)p.unshift(defSub);
+    if(p.length<7){bad++;return}
+    const [sub,q,a,b,c,d,r]=p;const k=String(r).trim().toUpperCase();
+    const n='ABCD'.indexOf(k)+1||parseInt(k);
+    if(!sub||!q||!a||!b||!c||!d||!(n>=1&&n<=4)){bad++;return}
+    if(!S.subjects.includes(sub))S.subjects.push(sub);
+    S.questions.push({subject:sub,q,o1:a,o2:b,o3:c,o4:d,ans:n});ok++;
+  });
+  return{ok,bad};
+}
+function rowHTML(name,i){
+  const cfg=SCHEMA[name],row=S[name][i];
+  return `<div class="rowed"><div class="rh"><span>#${i+1}</span><button data-a="del" data-c="${name}" data-i="${i}" aria-label="Delete">${I('trash',16)}</button></div>${cfg.f.map(([k,l,t])=>{
+    const at=`data-c="${name}" data-i="${i}" data-f="${k}"`;
+    if(t==='area')return `<label class="f"><span>${l}</span><textarea rows="2" ${at}>${esc(row[k])}</textarea></label>`;
+    if(t==='subject')return `<label class="f"><span>${l}</span><select ${at}>${S.subjects.map(x=>`<option ${row[k]===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+    if(t==='to'){const o=toOptions(),cur=row[k]||'all';return `<label class="f"><span>${l}</span><select ${at}>${o.map(([v,lab])=>`<option value="${esc(v)}" ${cur===v?'selected':''}>${esc(lab)}</option>`).join('')}${o.some(x=>x[0]===cur)?'':`<option value="${esc(cur)}" selected>${esc(cur)}</option>`}</select></label>`}
+    if(t==='status')return `<label class="f"><span>${l}</span><select ${at}>${['Passed','Failed','In Progress'].map(x=>`<option ${row[k]===x?'selected':''}>${x}</option>`).join('')}</select></label>`;
+    return fld(l,at,row[k],t||'text')}).join('')}${name==='assigned'?hintAssigned(row):''}</div>`;
+}
+function colEditor(name){
+  let idx=S[name].map((_,i)=>i),head='',more='';
+  if(name==='questions'){
+    idx=idx.filter(i=>ui.qf==='All'||S.questions[i].subject===ui.qf);
+    head=`<div class="rowed"><b style="font-size:14px">Add one MCQ</b>
+      <label class="f" style="margin-top:8px"><span>Subject (pick one or type a new subject)</span><input id="qa_sub" list="qa_subs" value="${esc(ui.qsub||'')}" autocomplete="off"><datalist id="qa_subs">${S.subjects.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
+      <label class="f"><span>Question</span><textarea id="qa_q" rows="2"></textarea></label>
+      ${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input id="qa_${n}" autocomplete="off"></label>`).join('')}
+      <label class="f"><span>Correct option</span><select id="qa_ans"><option value="1">A</option><option value="2">B</option><option value="3">C</option><option value="4">D</option></select></label>
+      <button class="btn" data-a="qadd">Save MCQ</button></div>
+      <div class="rowed"><b style="font-size:14px">Import many MCQs at once</b>
+      <p class="hint" style="margin-top:6px">One MCQ per line: <b>Question | A | B | C | D | answer</b> (answer is A-D or 1-4). Add the subject first to put MCQs in different subjects: <b>Subject | Question | A | B | C | D | answer</b>. You can paste from Excel/Sheets too.</p>
+      <label class="f"><span>Subject for lines without one</span><select id="bsub">${S.subjects.map(x=>`<option>${esc(x)}</option>`).join('')}</select></label>
+      <label class="f"><textarea class="code" id="bulk" placeholder="What is 2 + 2? | 3 | 4 | 5 | 6 | B"></textarea></label>
+      <div class="acts"><button class="btn" data-a="bulk">Import MCQs</button></div>
+      <label class="f" style="margin-top:12px"><span>Or upload a .csv / .txt file</span><input type="file" id="qfile" accept=".csv,.txt,.tsv"></label></div>
+      <label class="f"><span>Show subject</span><select id="qfsel">${['All'].concat(S.subjects).map(x=>`<option ${ui.qf===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label>
+      <p class="hint">${idx.length} MCQs${ui.qf==='All'?' in total':' in '+esc(ui.qf)} &middot; total bank ${S.questions.length}</p>`;
+    const all=idx.length;idx=idx.slice(0,ui.qlim);
+    if(all>idx.length)more=`<button class="btn line" style="width:100%;justify-content:center;margin-bottom:12px" data-a="qmore">Show more (${all-idx.length} left)</button>`;
+  }
+  return `<p class="hint">${name==='questions'?'Tests use these MCQs. The more you add here, the bigger tests students can take.':name==='assigned'?'Tests show on the Create Practice Test page. Set any number of MCQs, up to what the question bank has for that subject.':'Edit, add or remove items. Changes show instantly.'}</p>`+head+
+  idx.map(i=>rowHTML(name,i)).join('')+more+
+  `<button class="btn" data-a="add" data-c="${name}">${I('plus',16)} Add</button>`;
+}
+function studentCard(a){
+  const pr=DB.progress[a.id]||{},ts=(pr.tests||[]).filter(x=>x.status!=='In Progress'),c=ts.reduce((x,y)=>x+y.correct,0),n=ts.reduce((x,y)=>x+y.total,0);
+  return `<div class="rowed"><div class="rh"><span><b style="color:var(--ink)">${esc(a.name)}</b> &middot; @${esc(a.username)}</span></div>
+  <div class="tags"><span class="pill pu">${esc(a.grade||'No class')}</span></div>
+  <div class="mini" style="margin-top:0"><div><b>${ts.length}</b><span>Tests</span></div><div><b>${n?Math.round(c/n*100):0}%</b><span>Accuracy</span></div><div><b>${(pr.user&&pr.user.points)||0}</b><span>Points</span></div></div></div>`;
+}
+function panelBody(){
+  const b=S.brand,u=S.user,t=ui.tab;
+  if(t==='brand')return `${fld('Portal name','data-bind="brand.name"',b.name)}${fld('Short logo text (2-3 letters)','data-bind="brand.short"',b.short)}${fld('Logo image URL (optional)','data-bind="brand.logo"',b.logo)}${fld('Footer text','data-bind="brand.footer"',b.footer)}
+    <div class="grid2">${fld('Gradient start','data-bind="brand.c1"',b.c1,'color')}${fld('Gradient middle','data-bind="brand.c2"',b.c2,'color')}${fld('Gradient end','data-bind="brand.c3"',b.c3,'color')}${fld('Button colour','data-bind="brand.acc"',b.acc,'color')}</div>
+    <label class="sw"><input type="checkbox" data-bind="brand.dark" ${b.dark?'checked':''}>Dark mode</label>
+    ${fld('Subjects (comma separated)','data-bind="subjects"',S.subjects.join(', '))}`;
+  if(t==='accounts'){
+    return `<div class="rowed"><b style="font-size:14px">Add account</b>
+    <label class="f" style="margin-top:8px"><span>Full name</span><input id="an" autocomplete="off"></label>
+    <label class="f"><span>Username</span><input id="au" autocomplete="off" autocapitalize="none"></label>
+    <label class="f"><span>Password</span><input id="ap" type="password" autocomplete="new-password"></label><p class="hint">10+ characters with uppercase, lowercase, number and symbol.</p>
+    <label class="f"><span>Role</span><select id="ar"><option value="student">Student</option><option value="admin">Admin</option></select></label>
+    <label class="f"><span>Class (only for students)</span>${gradeSel('id="ag"','','Not set')}</label>
+    <button class="btn" data-a="addacc">Create account</button></div>`+
+    `<p class="hint">${DB.accounts.length} accounts. Students see content made for everyone, for their own class, or for them by name.</p>`+
+    DB.accounts.map(a=>`<div class="rowed"><div class="rh"><span><b style="color:var(--ink)">${esc(a.name)}</b> &middot; @${esc(a.username)}</span>${a.id===DB.session?'':`<button data-a="delacc" data-id="${a.id}" aria-label="Delete account">${I('trash',16)}</button>`}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill ${a.role==='admin'?'pu':'ok'}">${a.role}</span>
+      ${a.role==='student'?`<div class="f" style="margin:0;flex:1;min-width:110px">${gradeSel(`data-acct="${a.id}" data-f="grade"`,a.grade,'No class')}</div>`:''}
+      <button class="btn line sm" data-a="setpin" data-id="${a.id}">Change password</button></div></div>`).join('');
+  }
+  if(t==='results'){
+    const st=DB.accounts.filter(a=>a.role==='student');
+    if(!st.length)return `<p class="hint">No student accounts yet. Add them in the Accounts tab.</p>`;
+    return `<p class="hint">Results of tests taken by each student in this portal.</p>`+st.map(a=>studentCard(a)).join('');
+  }
+  if(t==='menu')return `<p class="hint">Turn pages on or off and rename them.</p>`+S.menu.map((m,i)=>`<div class="rowed"><label class="sw"><input type="checkbox" data-c="menu" data-i="${i}" data-f="on" ${m.on?'checked':''}>Show in menu</label>${fld('Label',`data-c="menu" data-i="${i}" data-f="label"`,m.label)}</div>`).join('');
+  if(t==='content')return `<div class="chips" style="margin-bottom:14px">${ckeys().map(k=>`<button class="chip ${ui.col===k?'on':''}" data-a="col" data-v="${k}">${SCHEMA[k].label}</button>`).join('')}</div>`+colEditor(ui.col);
+  if(t==='backup')return `<p class="hint">Online database backup is handled by the server/hosting provider. The browser does not contain the live database.</p>
+    <div class="acts" style="margin-bottom:14px"><button class="btn" data-a="download">Download backup</button><button class="btn line" data-a="copy">Copy JSON</button></div>
+    <p class="hint">For production safety, database restore and deletion of the whole database are not available from the public Admin panel. Use your hosting provider’s database backup tools.</p>`;
+}
+function renderPanel(){$('#pnl').innerHTML='';if(isStaff())render()}
+
+/* ============ ACTIONS ============ */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function startRun(subject,n,bank,minutes,cap){
+  const pool=shuffle(S.questions.filter(q=>q.subject===subject&&q.q));
+  if(!pool.length){toast('No MCQs for '+subject+'. '+(isStaff()?'Add some in the panel > Content > Question bank.':'Ask your admin to add some.'));return}
+  if(n>pool.length){
+    if(!cap){toast('Only '+pool.length+' MCQs in '+subject+', but '+n+' needed. '+(isStaff()?'Add more in the panel > Content > Question bank > Import MCQs.':'Ask your admin to add more.'));return}
+    toast('Bank has only '+pool.length+' MCQs for '+subject+'. Starting with '+pool.length+'.');n=pool.length;
+  }
+  run={subject,bank,qs:pool.slice(0,Math.max(1,n)),i:0,ans:[],view:'take',end:minutes>0?Date.now()+minutes*60000:0};
+  go('run');
+}
+function finishRun(){
+  S.route='run';
+  const correct=run.qs.reduce((a,q,i)=>a+(run.ans[i]===q.ans?1:0),0),n=run.qs.length;
+  const nums=S.tests.map(t=>parseInt(String(t.id).replace(/\D/g,''))||0);
+  const id='Test'+(Math.max(10000,...nums)+1);
+  const t={id,title:id,subject:run.subject,bank:run.bank,total:n,correct,date:fmtDate(new Date()),status:correct/n>=.5?'Passed':'Failed',qs:run.qs,ans:run.ans.slice()};
+  S.tests.unshift(t);S.user.points+=correct;run.t=t;run.view='result';render();
+}
+const A={
+  go:d=>go(d.r),back:()=>{if(hOK)history.back();else goBack()},drawer:()=>{ui.drawer=!ui.drawer;if(ui.drawer)histPush();render()},
+  dark:()=>{if(role()==='admin')S.brand.dark=!S.brand.dark;else S.user.dark=!isDark();apply();renderPanel();persist()},
+  bell:()=>toast(S.messages.length?`${S.messages.length} messages. Latest: ${S.messages[0].text}`:'No new notifications'),
+  panel:()=>{if(!isStaff())return;ui.panel=!ui.panel;if(ui.panel)histPush();renderPanel()},tab:d=>{ui.tab=d.v;renderPanel()},col:d=>{ui.col=d.v;renderPanel()},
+  hf:d=>{ui.hf=d.v;ui.hp=1;render()},hp:d=>{ui.hp+=+d.v;render()},lb:d=>{ui.lb=d.v;render()},vgrid:()=>{ui.vgrid=!ui.vgrid;render()},
+  start:()=>startRun($('#cs').value,Math.max(1,parseInt($('#cn').value)||5),$('#cb').value||'Practice Test',Math.max(0,parseInt($('#ct').value)||0),false),
+  startAssigned:d=>{const a=S.assigned[+d.i];if(a)startRun(a.subject,Math.max(1,+a.count||1),a.title,Math.max(0,+a.minutes||0),false)},
+  qmore:()=>{ui.qlim+=15;renderPanel()},
+  qadd:()=>{const g=i=>$(i).value.trim(),sub=g('#qa_sub'),q=g('#qa_q'),o=[1,2,3,4].map(i=>g('#qa_'+i)),ans=+$('#qa_ans').value||1;
+    if(!sub||!q||o.some(x=>!x)){toast('Fill the subject, the question and all four options');return}
+    if(!S.subjects.includes(sub))S.subjects.push(sub);
+    S.questions.unshift({subject:sub,q,o1:o[0],o2:o[1],o3:o[2],o4:o[3],ans});ui.qsub=sub;ui.qlim=15;
+    toast('MCQ saved. '+sub+' now has '+availOf(sub)+' MCQs');render()},
+  sg:d=>{ui.sg=d.v;render()},
+  bulk:()=>{const r=importMCQs($('#bulk').value,$('#bsub').value);$('#bulk').value='';ui.qlim=15;toast(r.ok+' MCQs imported'+(r.bad?', '+r.bad+' lines skipped':''));renderPanel();render()},
+  pick:d=>{run.ans[run.i]=+d.v;render()},
+  next:()=>{if(run.i<run.qs.length-1){run.i++;render()}else finishRun()},
+  quit:()=>{run=null;go('create')},
+  review:d=>{const t=S.tests.find(x=>x.id===d.id);if(!t?.qs){toast('Review is available for tests taken in this portal');return}run={rid:t.id};go('review')},
+  retake:d=>{const t=S.tests.find(x=>x.id===d.id);if(t)startRun(t.subject,t.total,t.bank,0,true)},
+  post:async()=>{const v=$('#np').value.trim();if(!v){toast('Write something first');return}try{const d=await api('/api/posts',{method:'POST',body:JSON.stringify({text:v})});S.posts=d.posts;DB.shared.posts=clone(d.posts);render()}catch(e){toast(e.message)}},
+  open:d=>window.open(d.u,'_blank','noopener'),soft:()=>toast(isStaff()?'Add a link for this item in the panel > Content':'No link added for this yet'),
+  logout:async()=>{try{await saveNow();await api('/api/logout',{method:'POST'})}catch(e){}DB=newDB();onlineReady=false;run=null;nav.length=0;ui.drawer=false;ui.panel=false;ui.lt='login';S=seed();S.route='login';apply();renderPanel();render()},
+  ltab:d=>{ui.lt=d.v;renderLogin()},
+  login:()=>doLogin(false),alogin:()=>doLogin(true),
+  signup:async()=>{toast('Student self-registration is disabled. Ask your Admin to create your account.');return;/*const n=$('#cn').value.trim(),u=$('#cu').value.trim().toLowerCase(),p=$('#cp').value.trim();
+    if(p!==$('#cp2').value.trim()){toast('The two PINs do not match');return}
+    const err=chkAcc(n,u,p);if(err){toast(err);return}
+    const g=$('#cg').value;if(!g){toast('Choose your class');return}
+    try{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name:n,username:u,pin:p,grade:g})});DB=d;onlineReady=true;const a=me();S=buildS(a);ui.lt='login';apply();renderPanel();render();toast('Account created and signed in')}catch(e){toast(e.message)}}*/},
+  add:d=>{const b=clone(SCHEMA[d.c].blank);S[d.c].unshift(b);renderPanel();render()},
+  del:d=>{S[d.c].splice(+d.i,1);renderPanel();render()},
+  copy:()=>{const j=JSON.stringify(DB,null,1);(navigator.clipboard?navigator.clipboard.writeText(j):Promise.reject()).then(()=>toast('Backup copied')).catch(()=>toast('Copy blocked. Use Download backup'))},
+  download:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)],{type:'application/json'}));a.download='portal-database.json';a.click();toast('Backup downloaded')},
+  import:()=>toast('Online restore requires a server backup with password hashes. Use Download backup for a safe export.'),
+  reset:()=>toast('For the online version, reset is disabled to protect the live database.'),
+  setup:async()=>{const n=$('#sn').value.trim(),u=$('#su').value.trim().toLowerCase(),p=$('#sp').value,err=chkAcc(n,u,p);
+    if(err){toast(err);return}
+    try{const d=await api('/api/setup',{method:'POST',body:JSON.stringify({name:n,username:u,password:p})});DB=d;onlineReady=true;const a=me();S=buildS(a);ui.lt='admin';apply();renderPanel();render();toast('Admin account created')}catch(e){toast(e.message)}},
+  
+  addacc:async()=>{const n=$('#an').value.trim(),u=$('#au').value.trim().toLowerCase(),p=$('#ap').value,r=$('#ar').value==='admin'?'admin':'student',g0=$('#ag').value,err=chkAcc(n,u,p);
+    if(err){toast(err);return}
+    try{await api('/api/admin/accounts',{method:'POST',body:JSON.stringify({name:n,username:u,password:p,role:r,grade:r==='student'?g0:''})});DB=await api('/api/state');toast('Account created for '+n);renderPanel();render()}catch(e){toast(e.message)}},
+  setpin:async d=>{const a=DB.accounts.find(x=>x.id===d.id);if(!a||!isStaff())return;
+    const p=prompt('New strong password for '+a.name)||'';if(!p)return;
+    if(!/^(?=.{10,128}$)(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).*$/.test(p)){toast('Password must be 10+ characters with uppercase, lowercase, number and symbol');return}
+    try{await api('/api/admin/accounts/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({password:p})});toast('Password changed for '+a.name)}catch(e){toast(e.message)}},
+  delacc:async d=>{const a=DB.accounts.find(x=>x.id===d.id);if(!a||a.id===DB.session)return;
+    if(a.role==='admin'&&DB.accounts.filter(x=>x.role==='admin').length<2){toast('Keep at least one Admin');return}
+    if(!confirm('Delete '+a.name+'?'+(a.role==='student'?' Their results are removed.':'')))return;
+    try{await api('/api/admin/accounts/'+encodeURIComponent(a.id),{method:'DELETE'});DB=await api('/api/state');renderPanel();render();toast('Account deleted')}catch(e){toast(e.message)}}
+};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t||t.disabled)return;if(t.classList.contains('ov')&&e.target!==t)return;A[t.dataset.a]?.(t.dataset,e)});
+
+function setPath(p,v){const k=p.split('.');let o=S;while(k.length>1)o=o[k.shift()];o[k[0]]=v}
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.acct){const a=DB.accounts.find(x=>x.id===t.dataset.acct);if(a){a.grade=t.value;api('/api/admin/accounts/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({grade:t.value})}).catch(e=>toast(e.message));}return}
+  if(t.id==='qfile'&&t.files[0]){const f=t.files[0],r=new FileReader();r.onload=()=>{const x=importMCQs(r.result,$('#bsub').value);toast(x.ok+' MCQs imported'+(x.bad?', '+x.bad+' lines skipped':''));renderPanel();render()};r.readAsText(f)}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='cs'){const n=availOf(t.value);const c=$('#cn');c.max=n;if(+c.value>n)c.value=n||1;$('#avh').textContent=n+' MCQs available in '+t.value;return}
+  if(t.id==='qfsel'){ui.qf=t.value;ui.qlim=15;renderPanel();return}
+  if(t.id==='hq'){ui.hq=t.value;ui.hp=1;ui.keepHq=true;render();return}
+  if(t.id==='vq'){ui.vq=t.value;ui.keepVq=true;render();return}
+  const v=t.type==='checkbox'?t.checked:t.type==='number'?(t.value===''?0:+t.value):t.value;
+  if(t.dataset.bind){
+    if(t.dataset.bind==='subjects')S.subjects=String(v).split(',').map(s=>s.trim()).filter(Boolean);
+    else setPath(t.dataset.bind,v);
+    apply();isStaff()?persist():render();
+  }else if(t.dataset.c){
+    S[t.dataset.c][+t.dataset.i][t.dataset.f]=v;isStaff()?persist():render();
+  }
+});
+
+setInterval(()=>{
+  if(!run||run.view!=='take'||!run.end)return;
+  const left=run.end-Date.now(),el=$('#tmr');if(el)el.textContent=fmtT(left);
+  if(left<=0){toast('Time is up');finishRun()}
+},1000);
+document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const i=e.target.id;if(i==='lp')A[ui.lt==='admin'?'alogin':'login']();else if(i==='sp')A.setup();else if(i==='cp2')A.signup()});
+(async function boot(){
+  const ok=await hydrate();
+  const a=me();
+  if(ok&&a){S=buildS(a);ui.tab=firstTab()}
+  else{S=seed();S.route='login'}
+  apply();render();
+})();
+</script>
+</body>
+</html>
