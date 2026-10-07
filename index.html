@@ -190,7 +190,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const uid=()=>'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const newDB=()=>{const x=seed(),sh={};GLOBAL.concat(OWNED).forEach(k=>sh[k]=x[k]);sh.posts=x.posts;return{v:1,accounts:[],shared:sh,progress:{},session:null}};
 let DB=newDB();
-let onlineReady=false, saveTimer=null;
+let onlineReady=false, saveTimer=null, needsSetup=false;
 async function api(path,opts={}){const r=await fetch(API_BASE+path,{credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})},...opts});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.error||'Network request failed');return d}
 async function hydrate(){try{const d=await api('/api/state');DB=d;onlineReady=true;return true}catch(e){onlineReady=false;return false}}
 function saveDB(){ if(!onlineReady)return; clearTimeout(saveTimer); saveTimer=setTimeout(async()=>{try{const a=me();if(!a)return;if(a.role==='admin')await api('/api/admin/shared',{method:'PUT',body:JSON.stringify({data:DB.shared})});else await api('/api/progress',{method:'PUT',body:JSON.stringify({data:DB.progress[a.id]||{}})});}catch(e){console.warn(e)}},350); }
@@ -444,7 +444,7 @@ const PAGES={dashboard:pgDashboard,courses:pgCourses,create:pgCreate,history:pgH
 
 /* ============ RENDER ============ */
 function renderLogin(){
-  const first=!DB.accounts.length,w='style="width:100%;justify-content:center"';
+  const first=needsSetup&&!DB.accounts.length,w='style="width:100%;justify-content:center"';
   $('#root').innerHTML=`<div class="login"><div class="card">${logoHTML()}`+(first?
   `<h2>Set up your portal</h2><p>Create the first Admin account. This creates the real online administrator account.</p>
   <label class="f"><span>Your name</span><input id="sn" autocomplete="name"></label>
@@ -675,7 +675,7 @@ const A={
   reset:()=>toast('For the online version, reset is disabled to protect the live database.'),
   setup:async()=>{const n=$('#sn').value.trim(),u=$('#su').value.trim().toLowerCase(),p=$('#sp').value,err=chkAcc(n,u,p);
     if(err){toast(err);return}
-    try{const d=await api('/api/setup',{method:'POST',body:JSON.stringify({name:n,username:u,password:p})});DB=d;onlineReady=true;const a=me();S=buildS(a);ui.lt='admin';apply();renderPanel();render();toast('Admin account created')}catch(e){toast(e.message)}},
+    try{const d=await api('/api/setup',{method:'POST',body:JSON.stringify({name:n,username:u,password:p})});DB=d;onlineReady=true;needsSetup=false;const a=me();S=buildS(a);ui.lt='admin';apply();renderPanel();render();toast('Admin account created')}catch(e){toast(e.message)}},
   
   addacc:async()=>{const n=$('#an').value.trim(),u=$('#au').value.trim().toLowerCase(),p=$('#ap').value,r=$('#ar').value==='admin'?'admin':'student',g0=$('#ag').value,err=chkAcc(n,u,p);
     if(err){toast(err);return}
@@ -721,6 +721,7 @@ setInterval(()=>{
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const i=e.target.id;if(i==='lp')A[ui.lt==='admin'?'alogin':'login']();else if(i==='sp')A.setup();else if(i==='cp2')A.signup()});
 (async function boot(){
   const ok=await hydrate();
+  if(!ok){try{const r=await fetch('/api/health');const j=await r.json();needsSetup=(j.hasAdmin===false)}catch(e){needsSetup=false}}
   const a=me();
   if(ok&&a){S=buildS(a);ui.tab=firstTab()}
   else{S=seed();S.route='login'}
