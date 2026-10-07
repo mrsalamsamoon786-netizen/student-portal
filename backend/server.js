@@ -98,7 +98,7 @@ async function admin(req,res,next){
   try{const u=await getUser(req.session.userId); if(!u||u.role!=='admin') return res.status(403).json({error:'Admin only'}); req.user=u; next();}catch(e){next(e)}
 }
 
-app.get('/api/health', async (req,res)=>{await ready; res.json({ok:true});});
+app.get('/api/health', async (req,res)=>{await ready; let hasAdmin=true; try{const c=await pool.query("SELECT COUNT(*)::int AS n FROM users WHERE role='admin'"); hasAdmin=c.rows[0].n>0}catch(e){} res.json({ok:true,hasAdmin});});
 app.get('/api/state', auth, async (req,res,next)=>{try{await ready; const u=await getUser(req.session.userId); if(!u)return res.status(401).json({error:'Session expired'}); res.json(await stateFor(u));}catch(e){next(e)}});
 const passwordOk = p => typeof p === 'string' && p.length >= 10 && p.length <= 128 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p);
 const passwordError = 'Password must be 10-128 characters and include uppercase, lowercase, number, and symbol.';
