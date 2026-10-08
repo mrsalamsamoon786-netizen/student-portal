@@ -256,6 +256,7 @@ function chkAcc(n,u,p){
 function buildS(acc){
   const sh=DB.shared,x=seed();
   GLOBAL.forEach(k=>{if(sh[k]!==undefined)x[k]=clone(sh[k])});
+  if(!x.profile)x.profile=seed().profile;
   x.posts=clone(sh.posts||[]);
   OWNED.forEach(k=>{
     let l=sh[k]||[];
@@ -301,7 +302,7 @@ const topPct=()=>Math.round(rank()/total()*1000)/10;
 const initials=n=>String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const rcol=p=>p>=75?'var(--ok)':p>=60?'var(--acc)':'var(--bad)';
 const ring=(p)=>`<div class="ring" style="--p:${p};--col:${rcol(p)}"><span>${p}%</span></div>`;
-function toast(m){const t=$('#tst');t.innerHTML=`<div class="toast" role="status">${esc(m)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>t.innerHTML='',2200)}
+function toast(m,ms=2200){const t=$('#tst');t.innerHTML=`<div class="toast" role="status">${esc(m)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>t.innerHTML='',ms)}
 function apply(){const r=document.documentElement.style,b=S.brand;
   r.setProperty('--c1',b.c1);r.setProperty('--c2',b.c2);r.setProperty('--c3',b.c3);r.setProperty('--acc',b.acc);
   isDark()?document.documentElement.setAttribute('data-dark',''):document.documentElement.removeAttribute('data-dark');
@@ -470,6 +471,25 @@ function pgMessages(){return S.messages.length?`<div class="card">${S.messages.m
 const PAGES={dashboard:pgDashboard,courses:pgCourses,create:pgCreate,history:pgHistory,reports:pgReports,leaderboard:pgLeaderboard,community:pgCommunity,notes:pgNotes,videos:pgVideos,papers:pgPapers,messages:pgMessages,help:pgHelp,run:pgRun,review:pgReview,weekly:pgWeekly,wkrun:pgWkRun};
 
 /* ============ RENDER ============ */
+
+/* ===== Admin forgot password (OTP via Email / Mobile) ===== */
+function fpHTML(w){
+  const f=ui.fp,busy=f.busy?'disabled':'';
+  const back=`<button class="btn line" ${w} style="margin-top:8px" data-a="fpback">Back to login</button>`;
+  if(f.step===1)return `<h2>Forgot password</h2><p>Enter your Admin username and choose where to receive a 6-digit code.</p>
+  <label class="f"><span>Admin username</span><input id="fpu" value="${esc(f.username||'')}" autocapitalize="none" autocomplete="username"></label>
+  <div class="chips" style="margin:6px 0 14px"><button class="chip ${f.channel==='email'?'on':''}" data-a="fpchan" data-v="email">Email</button><button class="chip ${f.channel==='mobile'?'on':''}" data-a="fpchan" data-v="mobile">Mobile number</button></div>
+  <button class="btn" ${w} ${busy} data-a="fpsend">${f.busy?'Sending...':'Send code'}</button>${back}`;
+  if(f.step===2)return `<h2>Enter the code</h2><p>${f.sentTo?`We sent a 6-digit code to <b>${esc(f.sentTo)}</b>.`:esc(f.msg||'')} It is valid for 10 minutes.</p>
+  <label class="f"><span>6-digit code</span><input id="fpo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="letter-spacing:6px;font-size:20px;text-align:center"></label>
+  <button class="btn" ${w} ${busy} data-a="fpverify">${f.busy?'Checking...':'Verify code'}</button>
+  <button class="btn line" ${w} style="margin-top:8px" data-a="fpresend">Resend code</button>${back}`;
+  return `<h2>Set a new password</h2><p>Code verified. Choose a new password for <b>${esc(f.username)}</b>.</p>
+  <label class="f"><span>New password</span><input id="fpp1" type="password" autocomplete="new-password"></label>
+  <label class="f"><span>Confirm password</span><input id="fpp2" type="password" autocomplete="new-password"></label>
+  <p class="hint">Password: 10+ characters, uppercase, lowercase, number and symbol.</p>
+  <button class="btn" ${w} ${busy} data-a="fpreset">${f.busy?'Saving...':'Reset password'}</button>${back}`;
+}
 function renderLogin(){
   const first=needsSetup&&!DB.accounts.length,w='style="width:100%;justify-content:center"';
   $('#root').innerHTML=`<div class="login"><div class="card">${logoHTML()}`+(first?
@@ -483,11 +503,12 @@ function renderLogin(){
     const lt=ui.lt||'login';
     const tabs=`<div class="chips" style="margin:14px 0 18px"><button class="chip ${lt==='login'?'on':''}" data-a="ltab" data-v="login">Student Login</button><button class="chip ${lt==='admin'?'on':''}" data-a="ltab" data-v="admin">Admin Login</button></div>`;
     const adm=lt==='admin';
+    if(adm&&ui.fp)return `${tabs}${fpHTML(w)}`;
     return `${tabs}<h2>${adm?'Admin login':'Student login'}</h2><p>${adm?'Sign in with your Admin account.':'Sign in with the account provided by your Admin.'}</p>
     <label class="f"><span>Username</span><input id="lu" autocomplete="username" autocapitalize="none"></label>
     <label class="f"><span>Password</span><input id="lp" type="password" autocomplete="current-password"></label>
     <button class="btn" ${w} data-a="${adm?'alogin':'login'}">${adm?'Sign in as Admin':'Sign in'}</button>
-    <p class="hint" style="margin-top:14px">Forgot your password? Contact the portal Admin to reset it.</p>`;
+    ${adm?`<p class="hint" style="margin-top:14px;text-align:center"><a href="#" data-a="fpstart" style="color:var(--acc,#7c2ddb);font-weight:600">Forgot password?</a></p>`:`<p class="hint" style="margin-top:14px">Forgot your password? Contact the portal Admin to reset it.</p>`}`;
   })())+`</div></div>`;
 }
 function render(){
@@ -519,16 +540,28 @@ function schoolBar(){
 function ssInit(){
   if(ui.ss)return;
   const p=S.profile||{},b=S.brand;
-  ui.ss={adminName:p.adminName||(me()?me().name:''),position:p.position||'',phone:p.phone||'',school:p.school||(p.done?b.name:''),address:p.address||'',logo:b.logo||'',c1:b.c1,c2:b.c2,c3:b.c3,acc:b.acc,footer:b.footer||''};
+  ui.ss={adminName:p.adminName||(me()?me().name:''),position:p.position||'',phone:p.phone||'',email:'',mobile:'',school:p.school||(p.done?b.name:''),address:p.address||'',logo:b.logo||'',c1:b.c1,c2:b.c2,c3:b.c3,acc:b.acc,footer:b.footer||''};
 }
 function pgSchool(){
-  ssInit();const d=ui.ss,done=S.profile&&S.profile.done;
+  const pr=S.profile||{},br=S.brand;
+  if(pr.done&&!ui.ssEdit){
+    const row=(l,v)=>v?`<div class="kv" style="margin:8px 0"><span>${l}</span><b style="text-align:right;max-width:62%">${esc(v)}</b></div>`:'';
+    return `<div class="card"><div class="lgprev">${br.logo?`<img src="${esc(br.logo)}" alt="Logo">`:`<span class="lg">${esc(br.short)}</span>`}<div><h3 style="font-size:18px">${esc(pr.school||br.name)}</h3><span class="pill ok" style="margin-top:6px">Setup complete</span></div></div>
+    ${row('Name',pr.adminName)}${row('Position',pr.position)}${row('Contact',pr.phone)}${row('Address',pr.address)}${row('Footer',br.footer)}
+    <div style="display:flex;gap:8px;margin:12px 0">${['c1','c2','c3','acc'].map(k=>`<span style="width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:${esc(br[k])}"></span>`).join('')}</div>
+    <p class="hint">Aap ka setup save ho chuka hai. Kuch badalna ho to Edit dabayein.</p>
+    <button class="btn" data-a="ssedit">Edit information</button></div>`;
+  }
+  ssInit();const d=ui.ss,done=!!pr.done;
+  if(!ui.recLoaded){ui.recLoaded=true;api('/api/admin/recovery').then(r=>{if(ui.ss){ui.ss.email=r.email||'';ui.ss.mobile=r.mobile||'';if(ui.ssEdit||!(S.profile&&S.profile.done))render()}}).catch(()=>{})}
   const f=(l,k,t='text',ph='')=>`<label class="f"><span>${l}</span><input type="${t}" data-ss="${k}" value="${esc(d[k])}" placeholder="${esc(ph)}" autocomplete="off"></label>`;
-  return `<div class="card"><h3 style="font-size:18px;margin-bottom:4px">${done?'School / Academy Setup':'Set up your School / Academy'}</h3>
+  return `<div class="card"><h3 style="font-size:18px;margin-bottom:4px">${done?'Edit School / Academy information':'Set up your School / Academy'}</h3>
   <p class="hint">Yahan apni information bharein. Save karte hi poore portal mein (login, menu, tests, results, footer) aap ka naam aur logo khud lag jayega.</p>
   ${f('Your name *','adminName','text','e.g. Ahmed Khan')}
   ${f('Position','position','text','e.g. Principal / Director')}
   ${f('Contact no','phone','tel','e.g. 0300 1234567')}
+  ${f('Recovery email (for forgot password)','email','email','e.g. admin@school.com')}
+  ${f('Recovery mobile (with country code)','mobile','tel','e.g. +923001234567')}
   ${f('School / Academy name *','school','text','e.g. Al-Noor Academy')}
   <label class="f"><span>Address</span><textarea rows="2" data-ss="address" placeholder="Full address">${esc(d.address)}</textarea></label>
   <div class="f"><span>Logo</span><div class="lgprev">${d.logo?`<img src="${esc(d.logo)}" alt="Logo preview">`:`<span class="lg">${esc(initials(d.school||'Logo'))}</span>`}
@@ -536,7 +569,7 @@ function pgSchool(){
   <p class="hint" style="margin-top:14px"><b>Portal settings</b> (apne hisab se)</p>
   ${f('Footer text','footer')}
   <div class="grid2">${f('Gradient start','c1','color')}${f('Gradient middle','c2','color')}${f('Gradient end','c3','color')}${f('Button colour','acc','color')}</div>
-  <button class="btn" style="width:100%;justify-content:center;margin-top:6px" data-a="sssave">${I('check',16)} Save and apply</button></div>`;
+  <button class="btn" style="width:100%;justify-content:center;margin-top:6px" data-a="sssave">${I('check',16)} Save and apply</button>${done?`<button class="btn line" style="width:100%;justify-content:center;margin-top:8px" data-a="ssedit0">Cancel</button>`:''}</div>`;
 }
 let _ac=null;
 function playChime(){
@@ -569,9 +602,16 @@ function resizeLogo(file){
     if(file.size>6*1024*1024)return rej(new Error('Image is too big. Choose one under 6 MB'));
     if(file.type==='image/svg+xml'){const r=new FileReader();r.onload=()=>{r.result.length>300000?rej(new Error('SVG is too large')):res(r.result)};r.onerror=()=>rej(new Error('Could not read the image'));r.readAsDataURL(file);return}
     const img=new Image(),url=URL.createObjectURL(file);
-    img.onload=()=>{const m=256,k=Math.min(1,m/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*k)),h=Math.max(1,Math.round(img.height*k));
-      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);
-      res(c.toDataURL(file.type==='image/jpeg'?'image/jpeg':'image/png',.9))};
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const type=file.type==='image/jpeg'?'image/jpeg':'image/png';
+      for(const m of [256,192,128,96]){
+        const k=Math.min(1,m/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*k)),h=Math.max(1,Math.round(img.height*k));
+        const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+        const u=c.toDataURL(type,.85);if(u.length<=150000)return res(u);
+      }
+      rej(new Error('This logo is too detailed. Please choose a simpler or smaller image.'));
+    };
     img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Could not read the image'))};img.src=url;
   });
 }
@@ -584,6 +624,8 @@ const HELP_STUDENT=[
  ['Subject mein "0 MCQs" ya "No MCQs" likha aa raha hai.','Iska matlab hai ke Admin ne us subject ke sawal abhi add nahi kiye. Admin ko batayein ke Question bank mein MCQs add kar de.'],
  ['Weekly Test kahan hai? Mujhe nazar nahi aa raha.','Menu mein "Weekly Test" kholein. Test tab nazar aata hai jab teacher usay Publish kare aur wo aap ki class ya aap ko assign ho.\nNazar na aaye to "Refresh" dabayein, phir bhi na aaye to teacher se poochein.'],
  ['Weekly Test ke rules kya hain?','- Har weekly test sirf EK dafa diya ja sakta hai.\n- Start dabate hi timer shuru ho jata hai.\n- Aap ke jawab khud save hote rehte hain. Internet ya app band ho jaye to "Resume test" se wahin se dobara shuru karein, lekin timer chalta rehta hai.\n- Time khatam hone par test khud submit ho jata hai.\n- Submit ke baad dobara nahi de sakte. Dobara dena ho to sirf teacher ijazat de sakta hai.'],
+ ['Subjective (likhne wala) weekly test mein kya hota hai?','Har sawal ke neeche likhne ka dabba hota hai. Aap ke jawab khud save hote rehte hain. Submit karne ke baad teacher aap ke jawab check karta hai.\nTab tak "Waiting for your teacher to check" likha rehta hai. Check hone ke baad aap ko marks, teacher ke comments aur feedback nazar aate hain.'],
+ ['Test dene ke baad mera result kyun nahi dikh raha?','Weekly test ka result foran nahi dikhta. Jab sab students test de lein to teacher "Publish results" dabata hai, uske baad aap ko apna result Weekly Test page par nazar aata hai. Tab tak "Submitted" likha rehta hai. Aap ke jawab save hain.'],
  ['Weekly Test ke baad sahi jawab kyun nahi dikh rahe?','Sahi jawab tab dikhte hain jab teacher ne "Show correct answers" on kiya ho. Warna sirf aap ka score aur result dikhta hai.'],
  ['Mera result aur purane tests kahan dekhun?','"Test History" mein aap ke saare practice tests hain. Wahan Results, Review aur Retake ke buttons hain.\n"My MCQ Reports" mein subject ke hisab se aap ki accuracy dikhti hai.\nWeekly test ka result "Weekly Test" page par us test ke neeche hota hai.'],
  ['Practice test beech mein chhor diya to?','Practice test ke jawab save nahi hote. Quit ya back karne par wo test khatam ho jata hai aur dobara shuru karna parta hai. (Weekly test is se alag hai, usmein jawab save hote hain.)'],
@@ -597,7 +639,10 @@ const HELP_ADMIN=[
  ['Student ka account kaise banaun?','"Accounts" mein jayein, Full name, Username aur Password likhein, Role "Student" rakhein aur Class chunein, phir "Create account" dabayein.\nPassword kam az kam 10 characters ka ho aur usmein bara harf, chhota harf, number aur symbol ho.\nStudents khud account nahi bana sakte, sirf Admin banata hai.'],
  ['Student ka password bhool gaya.','"Accounts" mein us student ke samne "Change password" dabayein aur naya password dein.'],
  ['MCQs (sawal) kaise add karun?','"Question bank" mein ek ek MCQ add kar sakte hain ya "Import many MCQs" mein ek line mein ek sawal likhein:\nQuestion | A | B | C | D | answer\n(answer A-D ya 1-4). Excel se paste ya .csv file bhi upload ho sakti hai.\nYe sawal sirf Practice Test ke liye hain.'],
- ['Weekly paper kaise banaun aur students ko kaise dun?','1. "Weekly Paper Maker" mein "New weekly paper" dabayein.\n2. Title, time limit, marks aur pass mark likhein, "Assign to" mein sab students, ek class ya ek student chunein.\n3. Sawal add karein (ya paste karein).\n4. "Save and publish" dabayein. Ab students ko "Weekly Test" mein nazar aayega.\nWeekly paper ke sawal Question bank se alag hote hain, is liye students inki practice nahi kar sakte.'],
+ ['Weekly paper kaise banaun aur students ko kaise dun?','1. "Weekly Paper Maker" mein "New weekly paper" dabayein.\n2. Pehle Paper type chunein: MCQs (Objective) ya Subjective (Written).\n3. Title, time limit, marks aur pass mark likhein, "Assign to" mein sab students, ek class ya ek student chunein.\n4. Sawal add karein (ya paste karein).\n5. "Save and publish" dabayein. Ab students ko "Weekly Test" mein nazar aayega.\nWeekly paper ke sawal Question bank se alag hote hain, is liye students inki practice nahi kar sakte.'],
+ ['MCQs aur Subjective paper mein kya farq hai?','MCQs (Objective): student A, B, C ya D chunta hai. Paper khud check hota hai aur result foran dikhta hai.\nSubjective (Written): student apne lafzon mein likh kar jawab deta hai. Har sawal ke marks aap likhte hain, aur model answer (sirf aap ko nazar aata hai) bhi daal sakte hain.\nPaper banate waqt type chunein. Students ke test shuru karne ke baad type badli nahi ja sakti.'],
+ ['Subjective paper kaise check karun?','"Weekly Paper Maker" mein paper ke samne "n to check" likha hota hai. "Results" kholein, student ke samne "Check answers" dabayein, har jawab ke marks (aur chahein to comment) likhein aur "Save marks" dabayein.\nSave karte hi student ko result nazar aane lagta hai. Marks dobara badalne hon to "Edit marks" dabayein.'],
+ ['Results students ko kab aur kaise dikhaun?','Result khud ban jata hai (MCQs foran, Subjective aap ke check karne par), lekin students ko tab tak nahi dikhta jab tak aap publish na karein.\nPaper ki list mein dekhein ke kitne students ne test de diya ("5 of 5 submitted"). Sab ho jayein to "Publish results" dabayein. Koi submit ya check baqi ho to portal pehle bata deta hai.\nGhalti ho jaye to "Hide results" se wapas chhupa sakte hain. Naye paper shuru mein hidden hote hain.'],
  ['Weekly test band ya dobara kaise karun?','Paper ki list mein "Close test" dabayein to naye students start nahi kar sakte. Dobara kholne ke liye "Publish" dabayein.\nKisi student ko dobara mauqa dena ho to "Results" mein us ke samne "Allow retake" dabayein (us ka purana result delete ho jata hai).'],
  ['Weekly paper ke sawal edit kyun nahi ho rahe?','Jab koi student test shuru kar de to sawal lock ho jate hain taake result na bigray. Sawal badalne ke liye "Duplicate" karein aur nayi copy edit karke publish karein. Settings (jaise time ya answers dikhana) phir bhi badli ja sakti hain.'],
  ['Results kahan dekhun aur download kaise karun?','"Weekly Paper Maker" mein paper ke "Results" par jayein. Wahan score, pass/fail, kaun late hai aur kaun abhi start nahi kiya sab dikhta hai. "Download CSV" se Excel file mil jati hai.\nPractice tests ka khulasa "Student results" mein hai.'],
@@ -775,17 +820,48 @@ function finishRun(){
   S.tests.unshift(t);S.user.points+=correct;run.t=t;run.view='result';render();
 }
 const A={
+  fpstart:(d,e)=>{if(e&&e.preventDefault)e.preventDefault();ui.fp={step:1,channel:'email',username:($('#lu')?$('#lu').value.trim().toLowerCase():'')};renderLogin()},
+  fpback:()=>{ui.fp=null;renderLogin()},
+  fpchan:d=>{ui.fp.username=($('#fpu')?$('#fpu').value.trim().toLowerCase():ui.fp.username);ui.fp.channel=d.v;renderLogin()},
+  fpsend:async()=>{const f=ui.fp;if(!f||f.busy)return;f.username=($('#fpu')?$('#fpu').value.trim().toLowerCase():f.username);
+    if(!f.username){toast('Enter your Admin username');return}
+    f.busy=true;renderLogin();
+    try{const r=await api('/api/auth/forgot/request',{method:'POST',body:JSON.stringify({username:f.username,channel:f.channel})});
+      f.busy=false;
+      if(r.noContact){toast(r.message,5000);renderLogin();return}
+      f.step=2;f.sentTo=r.sentTo||'';f.msg=r.message;renderLogin();toast(r.sentTo?'Code sent':'Check your '+(f.channel==='mobile'?'phone':'email'),3000)}
+    catch(e){f.busy=false;renderLogin();toast(e.message,5000)}},
+  fpresend:async()=>{ui.fp.step=1;A.fpsend()},
+  fpverify:async()=>{const f=ui.fp;if(!f||f.busy)return;const o=$('#fpo').value.trim();
+    if(!/^\d{6}$/.test(o)){toast('Enter the 6-digit code');return}
+    f.busy=true;renderLogin();
+    try{const r=await api('/api/auth/forgot/verify',{method:'POST',body:JSON.stringify({username:f.username,otp:o})});f.busy=false;f.token=r.token;f.step=3;renderLogin()}
+    catch(e){f.busy=false;renderLogin();toast(e.message,5000)}},
+  fpreset:async()=>{const f=ui.fp;if(!f||f.busy)return;const a=$('#fpp1').value,b=$('#fpp2').value;
+    if(a!==b){toast('Passwords do not match');return}
+    f.busy=true;renderLogin();
+    try{await api('/api/auth/forgot/reset',{method:'POST',body:JSON.stringify({username:f.username,token:f.token,password:a})});
+      ui.fp=null;renderLogin();toast('Password changed. Please sign in.',4000)}
+    catch(e){f.busy=false;renderLogin();toast(e.message,6000)}},
   sssave:async()=>{
-    const d=ui.ss;if(!d)return;
+    const d=ui.ss;if(!d||ui.ssBusy)return;
     if(!d.adminName.trim()){toast('Enter your name');return}
     if(!d.school.trim()){toast('Enter the School / Academy name');return}
-    const sch=d.school.trim(),short=(sch.split(/\s+/).map(w=>w[0]).join('').slice(0,3)||sch.slice(0,2)).toUpperCase();
-    S.profile={adminName:d.adminName.trim(),position:d.position.trim(),phone:d.phone.trim(),school:sch,address:d.address.trim(),done:true};
-    Object.assign(S.brand,{name:sch,short,logo:d.logo||'',footer:d.footer.trim()||S.brand.footer,c1:d.c1,c2:d.c2,c3:d.c3,acc:d.acc});
-    apply();
-    try{persist();await saveNow();ui.ss=null;render();showWelcome()}
-    catch(e){toast(e.message)}
+    try{_ac=_ac||new (window.AudioContext||window.webkitAudioContext)();_ac.resume()}catch(e){}
+    const first=!(S.profile&&S.profile.done);ui.ssBusy=true;
+    try{
+      const r=await api('/api/admin/school',{method:'PUT',body:JSON.stringify({adminName:d.adminName,position:d.position,phone:d.phone,school:d.school,address:d.address,logo:d.logo||'',footer:d.footer,c1:d.c1,c2:d.c2,c3:d.c3,acc:d.acc})});
+      await api('/api/admin/recovery',{method:'PUT',body:JSON.stringify({email:d.email||'',mobile:d.mobile||''})});
+      const st=await api('/api/state');
+      if(!(st.shared&&st.shared.profile&&st.shared.profile.done))throw new Error('Save did not reach the database. Please try again.');
+      S.profile=r.profile;Object.assign(S.brand,r.brand);DB.shared.profile=clone(r.profile);DB.shared.brand=clone(S.brand);
+      ui.ss=null;ui.ssEdit=false;apply();render();
+      if(first)showWelcome();else toast('School information updated');
+    }catch(e){toast(e.message||'Could not save. Please try again.',6000)}
+    ui.ssBusy=false;
   },
+  ssedit:()=>{ui.ss=null;ui.ssEdit=true;render()},
+  ssedit0:()=>{ui.ss=null;ui.ssEdit=false;render()},
   sslogoclear:()=>{if(ui.ss){ui.ss.logo='';render()}},
   wlcclose:()=>{$('#wlc').innerHTML='';try{speechSynthesis.cancel()}catch(e){}go('home')},
   go:d=>go(d.r),back:()=>{if(hOK)history.back();else goBack()},drawer:()=>{ui.drawer=!ui.drawer;if(ui.drawer)histPush();render()},
@@ -810,7 +886,7 @@ const A={
   retake:d=>{const t=S.tests.find(x=>x.id===d.id);if(t)startRun(t.subject,t.total,t.bank,0,true)},
   post:async()=>{const v=$('#np').value.trim();if(!v){toast('Write something first');return}try{const d=await api('/api/posts',{method:'POST',body:JSON.stringify({text:v})});S.posts=d.posts;DB.shared.posts=clone(d.posts);render()}catch(e){toast(e.message)}},
   open:d=>window.open(d.u,'_blank','noopener'),soft:()=>toast(isStaff()?'Add a link for this item in the panel > Content':'No link added for this yet'),
-  logout:async()=>{try{await saveNow();await api('/api/logout',{method:'POST'})}catch(e){}DB=newDB();onlineReady=false;wkReset();run=null;nav.length=0;ui.drawer=false;ui.panel=false;ui.lt='login';ui.ss=null;S=seed();S.route='login';brandLogin().then(()=>{apply();render()});apply();renderPanel();render()},
+  logout:async()=>{try{await saveNow();await api('/api/logout',{method:'POST'})}catch(e){}DB=newDB();onlineReady=false;wkReset();run=null;nav.length=0;ui.drawer=false;ui.panel=false;ui.lt='login';ui.fp=null;ui.recLoaded=false;ui.ss=null;S=seed();S.route='login';brandLogin().then(()=>{apply();render()});apply();renderPanel();render()},
   ltab:d=>{ui.lt=d.v;renderLogin()},
   login:()=>doLogin(false),alogin:()=>doLogin(true),
   signup:async()=>{toast('Student self-registration is disabled. Ask your Admin to create your account.');return;/*const n=$('#cn').value.trim(),u=$('#cu').value.trim().toLowerCase(),p=$('#cp').value.trim();
@@ -841,12 +917,14 @@ const A={
     try{await api('/api/admin/accounts/'+encodeURIComponent(a.id),{method:'DELETE'});DB=await api('/api/state');renderPanel();render();toast('Account deleted')}catch(e){toast(e.message)}}
 };
 /* ============ WEEKLY TEST: Paper Maker (Admin) + Weekly Test (Students). Separate from the Question bank. ============ */
-const WK={loaded:false,loading:false,papers:[],view:'list',edit:null,res:null,err:''};
+const WK={loaded:false,loading:false,papers:[],view:'list',edit:null,res:null,grade:null,err:''};
 const WKS={loaded:false,loading:false,papers:[],err:''};
 let wkrun=null,wkSaveT=null;
-function wkReset(){WK.loaded=false;WK.loading=false;WK.papers=[];WK.view='list';WK.edit=null;WK.res=null;WK.err='';WKS.loaded=false;WKS.loading=false;WKS.papers=[];WKS.err='';wkrun=null}
-const wkBlankQ=()=>({q:'',o1:'',o2:'',o3:'',o4:'',ans:1});
-const wkBlank=()=>({id:'',title:'',subject:'',minutes:30,marksPerQ:1,passPct:50,to:'all',status:'draft',showAnswers:false,shuffle:true,attempts:0,questions:[wkBlankQ()]});
+function wkReset(){WK.loaded=false;WK.loading=false;WK.papers=[];WK.view='list';WK.edit=null;WK.res=null;WK.grade=null;WK.err='';WKS.loaded=false;WKS.loading=false;WKS.papers=[];WKS.err='';wkrun=null}
+const wkBlankQ=k=>k==='subjective'?{q:'',marks:5,key:''}:{q:'',o1:'',o2:'',o3:'',o4:'',ans:1};
+const wkTotal=p=>p.kind==='subjective'?+p.questions.reduce((a,q)=>a+(+q.marks||0),0).toFixed(2):+(p.questions.length*(+p.marksPerQ||1)).toFixed(2);
+const wkKindPill=k=>k==='subjective'?'<span class="pill pu">Subjective</span>':'<span class="pill pu">MCQs</span>';
+const wkBlank=()=>({id:'',kind:'objective',title:'',subject:'',minutes:30,marksPerQ:1,passPct:50,to:'all',status:'draft',showAnswers:false,shuffle:true,attempts:0,questions:[wkBlankQ()]});
 const wkToLabel=to=>{to=to||'all';if(to==='all')return 'All students';if(to.startsWith('grade:'))return to.slice(6)+' (whole class)';if(to.startsWith('stu:')){const a=DB.accounts.find(x=>x.id===to.slice(4));return a?a.name:'One student'}return to};
 const wkFmt=s=>s?new Date(s).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
 const wkPill=s=>s==='published'?'<span class="pill ok">Live</span>':s==='closed'?'<span class="pill warn">Closed</span>':'<span class="pill">Draft</span>';
@@ -873,61 +951,88 @@ function wkAdminPage(){
   if(!WK.loaded&&!WK.loading)wkLoadAdmin();
   if(!WK.loaded)return `<div class="card empty"><b>Loading...</b></div>`;
   if(WK.view==='edit'&&WK.edit)return wkEditor();
+  if(WK.view==='grade'&&WK.grade)return wkGradeView();
   if(WK.view==='res'&&WK.res)return wkResultsView();
   return wkList();
 }
 function wkList(){
   const head=`<div class="card"><h3 style="font-size:18px;margin-bottom:6px">Weekly Paper Maker</h3>
-  <p class="hint">Make a separate paper for the weekly test. These questions are kept apart from the Question bank, so students cannot practise with them. Students see a paper only after you publish it, and they can take it once.</p>
+  <p class="hint">Make a separate paper for the weekly test. You can make an MCQ (objective) paper, which is checked automatically, or a Subjective paper where students write answers and you check them. These questions are kept apart from the Question bank. Students see a paper only after you publish it, and they can take it once.</p>
   <div class="acts"><button class="btn" data-a="wknew">${I('plus',16)} New weekly paper</button><button class="btn line" data-a="wkrefresh">${I('refresh',16)} Refresh</button></div></div>`;
   if(WK.err)return head+`<div class="card empty"><b>Could not load</b>${esc(WK.err)}</div>`;
   if(!WK.papers.length)return head+`<div class="card empty"><b>No weekly papers yet</b>Tap "New weekly paper" to make your first one.</div>`;
   return head+WK.papers.map(p=>`<div class="card"><div class="kv" style="margin:0 0 6px"><b style="font-size:15px">${esc(p.title)}</b>${wkPill(p.status)}</div>
-  <p class="hint" style="margin:0 0 10px">${esc(p.subject||'No subject')} &middot; ${p.questions.length} questions &middot; ${p.minutes?p.minutes+' min':'No time limit'} &middot; ${+(p.questions.length*p.marksPerQ).toFixed(2)} marks<br>For: ${esc(wkToLabel(p.to))} &middot; ${p.submitted} submitted${p.attempts>p.submitted?' ('+(p.attempts-p.submitted)+' in progress)':''}</p>
-  <div class="acts">${p.status==='published'?`<button class="btn line sm" data-a="wkstatus" data-id="${esc(p.id)}" data-s="closed">Close test</button>`:`<button class="btn sm" data-a="wkstatus" data-id="${esc(p.id)}" data-s="published">Publish</button>`}
+  <p class="hint" style="margin:0 0 10px">${wkKindPill(p.kind)} ${esc(p.subject||'No subject')} &middot; ${p.questions.length} questions &middot; ${p.minutes?p.minutes+' min':'No time limit'} &middot; ${wkTotal(p)} marks<br>For: ${esc(wkToLabel(p.to))} &middot; ${p.submitted} of ${p.assigned} submitted${p.attempts>p.submitted?' ('+(p.attempts-p.submitted)+' in progress)':''}${p.kind==='subjective'&&p.ungraded?` &middot; <b style="color:var(--bad)">${p.ungraded} to check</b>`:''}<br>${p.resultsPublished?'<span class="pill ok" style="margin-top:6px">Results published</span>':'<span class="pill warn" style="margin-top:6px">Results hidden from students</span>'}${!p.resultsPublished&&p.assigned>0&&p.submitted>=p.assigned?' <b style="color:var(--ok)">All students submitted. Ready to publish.</b>':''}</p>
+  <div class="acts">${p.status==='published'?`<button class="btn line sm" data-a="wkstatus" data-id="${esc(p.id)}" data-s="closed">Close test</button>`:`<button class="btn sm" data-a="wkstatus" data-id="${esc(p.id)}" data-s="published">Publish test</button>`}
+  <button class="btn sm" style="${p.resultsPublished?'background:var(--mut)':''}" data-a="wkpub" data-id="${esc(p.id)}" data-v="${p.resultsPublished?0:1}">${p.resultsPublished?'Hide results':'Publish results'}</button>
   <button class="btn line sm" data-a="wkedit" data-id="${esc(p.id)}">Edit</button>
   <button class="btn line sm" data-a="wkresults" data-id="${esc(p.id)}">Results</button>
   <button class="btn line sm" data-a="wkdup" data-id="${esc(p.id)}">Duplicate</button>
   <button class="btn line sm" style="color:var(--bad)" data-a="wkdel" data-id="${esc(p.id)}">Delete</button></div></div>`).join('');
 }
 function wkEditor(){
-  const e=WK.edit,lock=(e.attempts||0)>0,dis=lock?'disabled':'';
+  const e=WK.edit,lock=(e.attempts||0)>0,dis=lock?'disabled':'',subj=e.kind==='subjective';
   const toOpts=toOptions().map(([v,l])=>`<option value="${esc(v)}" ${e.to===v?'selected':''}>${esc(l)}</option>`).join('');
   const qs=e.questions.map((q,i)=>`<div class="rowed"><div class="rh"><span><b style="color:var(--ink)">Question ${i+1}</b></span>${lock?'':`<button data-a="wkqdel" data-i="${i}" aria-label="Delete question">${I('trash',16)}</button>`}</div>
-    <label class="f"><span>Question</span><textarea rows="2" data-wkq="${i}|q" ${dis}>${esc(q.q)}</textarea></label>
-    ${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input data-wkq="${i}|o${n}" value="${esc(q['o'+n])}" ${dis}></label>`).join('')}
-    <label class="f"><span>Correct option</span><select data-wkq="${i}|ans" ${dis}>${[1,2,3,4].map(n=>`<option value="${n}" ${+q.ans===n?'selected':''}>${'ABCD'[n-1]}</option>`).join('')}</select></label></div>`).join('');
+    <label class="f"><span>Question</span><textarea rows="${subj?3:2}" data-wkq="${i}|q" ${dis}>${esc(q.q)}</textarea></label>
+    ${subj?`<label class="f"><span>Marks for this question</span><input type="number" min="0.25" max="100" step="0.25" data-wkq="${i}|marks" value="${esc(q.marks)}" ${dis}></label>
+    <label class="f"><span>Model answer (optional, only you can see it)</span><textarea rows="3" data-wkq="${i}|key" ${dis}>${esc(q.key||'')}</textarea></label>`
+    :`${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input data-wkq="${i}|o${n}" value="${esc(q['o'+n])}" ${dis}></label>`).join('')}
+    <label class="f"><span>Correct option</span><select data-wkq="${i}|ans" ${dis}>${[1,2,3,4].map(n=>`<option value="${n}" ${+q.ans===n?'selected':''}>${'ABCD'[n-1]}</option>`).join('')}</select></label>`}</div>`).join('');
+  const total=subj?+e.questions.reduce((a,q)=>a+(+q.marks||0),0).toFixed(2):0;
   return `<div class="card"><h3 style="font-size:18px;margin-bottom:10px">${e.id?'Edit weekly paper':'New weekly paper'}</h3>
-  ${lock?`<p class="hint" style="color:var(--bad)">Students have already started this paper, so its questions are locked. You can still change the settings. To change questions, use Duplicate on the list.</p>`:''}
+  ${lock?`<p class="hint" style="color:var(--bad)">Students have already started this paper, so its type and questions are locked. You can still change the settings. To change questions, use Duplicate on the list.</p>`:''}
+  <div class="f"><span>Paper type</span><div class="chips"><button class="chip ${subj?'':'on'}" data-a="wkkind" data-v="objective" ${dis}>MCQs (Objective)</button><button class="chip ${subj?'on':''}" data-a="wkkind" data-v="subjective" ${dis}>Subjective (Written)</button></div></div>
+  <p class="hint">${subj?'Students write their answers. You check each answer and give marks. Students see the result after you check.':'Students choose A, B, C or D. It is checked automatically and the result shows at once.'}</p>
   <label class="f"><span>Paper title</span><input data-wk="title" value="${esc(e.title)}" placeholder="e.g. Weekly Test 5 - Biology"></label>
   <label class="f"><span>Subject (optional)</span><input data-wk="subject" list="wksubs" value="${esc(e.subject)}"><datalist id="wksubs">${S.subjects.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
   <div class="grid2"><label class="f"><span>Time limit (minutes, 0 = none)</span><input type="number" min="0" data-wk="minutes" value="${esc(e.minutes)}"></label>
-  <label class="f"><span>Marks per question</span><input type="number" min="0.25" step="0.25" data-wk="marksPerQ" value="${esc(e.marksPerQ)}"></label></div>
+  ${subj?`<div class="f"><span>Total marks</span><div style="padding:10px 12px;font-size:14px;font-weight:700;color:var(--ink)">${total}</div></div>`:`<label class="f"><span>Marks per question</span><input type="number" min="0.25" step="0.25" data-wk="marksPerQ" value="${esc(e.marksPerQ)}"></label>`}</div>
   <label class="f"><span>Pass mark (%)</span><input type="number" min="0" max="100" data-wk="passPct" value="${esc(e.passPct)}"></label>
   <label class="f"><span>Assign to</span><select data-wk="to">${toOpts}</select></label>
-  <label class="sw"><input type="checkbox" data-wk="shuffle" ${e.shuffle?'checked':''}>Shuffle question order for each student</label>
-  <label class="sw"><input type="checkbox" data-wk="showAnswers" ${e.showAnswers?'checked':''}>Show correct answers to students after they submit</label></div>
+  ${subj?'':`<label class="sw"><input type="checkbox" data-wk="shuffle" ${e.shuffle?'checked':''}>Shuffle question order for each student</label>`}
+  <label class="sw"><input type="checkbox" data-wk="showAnswers" ${e.showAnswers?'checked':''}>${subj?'Show model answers to students after I check their paper':'Show correct answers to students after they submit'}</label></div>
   <div class="card"><div class="sec"><h3>Questions (${e.questions.length})</h3></div>${qs}
   ${lock?'':`<div class="acts"><button class="btn line" data-a="wkqadd">${I('plus',16)} Add question</button></div>
-  <label class="f" style="margin-top:14px"><span>Or paste many questions, one per line</span><textarea id="wkbulk" rows="5" placeholder="Question | A | B | C | D | answer"></textarea></label>
-  <p class="hint">Format: <b>Question | A | B | C | D | answer</b>. The answer is A-D or 1-4.</p><button class="btn line" data-a="wkimport">Add pasted questions</button>`}</div>
+  ${subj?'':`<label class="f" style="margin-top:14px"><span>Or paste many questions, one per line</span><textarea id="wkbulk" rows="5" placeholder="Question | A | B | C | D | answer"></textarea></label>
+  <p class="hint">Format: <b>Question | A | B | C | D | answer</b>. The answer is A-D or 1-4.</p><button class="btn line" data-a="wkimport">Add pasted questions</button>`}`}</div>
   <div class="card"><div class="acts">${e.id?`<button class="btn" data-a="wksave" data-s="keep">Save changes</button>`:`<button class="btn line" data-a="wksave" data-s="draft">Save as draft</button><button class="btn" data-a="wksave" data-s="published">Save and publish</button>`}<button class="btn line" data-a="wkcancel">Cancel</button></div></div>`;
 }
 async function wkOpenResults(id){
   try{const d=await api('/api/weekly/admin/'+encodeURIComponent(id)+'/results');WK.res=d;WK.view='res';render();window.scrollTo(0,0)}catch(e){toast(e.message)}
 }
 function wkResultsView(){
-  const r=WK.res,p=r.paper,done=r.attempts.filter(a=>a.state==='submitted'),pass=done.filter(a=>a.passed).length;
+  const r=WK.res,p=r.paper,subj=p.kind==='subjective',sub=r.attempts.filter(a=>a.state==='submitted'),done=sub.filter(a=>!a.pending),pend=sub.length-done.length,pass=done.filter(a=>a.passed).length;
   const avg=done.length?Math.round(done.reduce((s,a)=>s+a.percent,0)/done.length*10)/10:0;
   return `<div class="card"><button class="link" data-a="wkback">&larr; Back to papers</button><h3 style="font-size:18px;margin:8px 0 4px">${esc(p.title)}</h3>
-  <p class="hint">${esc(p.subject||'No subject')} &middot; ${p.questionCount} questions &middot; ${p.totalMarks} marks &middot; pass at ${p.passPct}%</p>
-  <div class="grid2"><div class="card stat"><b>${done.length}</b><span>Submitted</span></div><div class="card stat"><b>${r.notAttempted.length}</b><span>Not started</span></div>
+  <p class="hint">${wkKindPill(p.kind)} ${esc(p.subject||'No subject')} &middot; ${p.questionCount} questions &middot; ${p.totalMarks} marks &middot; pass at ${p.passPct}%</p>
+  <div class="grid2"><div class="card stat"><b>${sub.length}</b><span>Submitted</span></div><div class="card stat"><b>${r.notAttempted.length}</b><span>Not started</span></div>
   <div class="card stat"><b>${avg}%</b><span>Average</span></div><div class="card stat"><b>${pass}</b><span>Passed</span></div></div>
+  ${pend?`<p class="hint" style="margin:10px 0 0;color:var(--bad)"><b>${pend}</b> paper${pend>1?'s':''} waiting for you to check.</p>`:''}
+  <div class="card" style="margin:12px 0 0;border-color:${p.resultsPublished?'var(--ok)':'var(--acc)'}"><b style="font-size:14px">${p.resultsPublished?'Results are published. Students can see them.':'Results are hidden from students'}</b>
+  <p class="hint" style="margin:4px 0 10px">${sub.length} of ${p.assigned} students submitted${r.notAttempted.length?', '+r.notAttempted.length+' not started':''}.${!p.resultsPublished&&p.assigned>0&&sub.length>=p.assigned&&!pend?' Everyone has submitted. You can publish now.':''}</p>
+  <button class="btn sm" data-a="wkpub" data-id="${esc(p.id)}" data-v="${p.resultsPublished?0:1}">${p.resultsPublished?'Hide results':'Publish results to students'}</button></div>
   ${r.attempts.length?`<div class="acts" style="margin-top:6px"><button class="btn line sm" data-a="wkcsv">Download CSV</button></div>`:''}</div>
   <div class="card"><div class="sec"><h3>Results</h3></div>${r.attempts.length?r.attempts.map((a,i)=>`<div class="rowed"><div class="rh"><span><b style="color:var(--ink)">${i+1}. ${esc(a.name)}</b> &middot; @${esc(a.username)}${a.grade?' &middot; '+esc(a.grade):''}</span></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${a.state==='submitted'?`<b>${a.score}/${a.totalMarks}</b><span>${a.percent}%</span>${a.passed?'<span class="pill ok">Passed</span>':'<span class="pill bad">Not passed</span>'}${a.late?'<span class="pill warn">Late</span>':''}<small style="color:var(--mut)">${wkFmt(a.submittedAt)}</small>`:'<span class="pill warn">In progress</span>'}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${a.state==='submitted'?(a.pending?`<span class="pill warn">Needs checking</span>${a.late?'<span class="pill warn">Late</span>':''}<small style="color:var(--mut)">${wkFmt(a.submittedAt)}</small>`:`<b>${a.score}/${a.totalMarks}</b><span>${a.percent}%</span>${a.passed?'<span class="pill ok">Passed</span>':'<span class="pill bad">Not passed</span>'}${a.late?'<span class="pill warn">Late</span>':''}<small style="color:var(--mut)">${wkFmt(a.submittedAt)}</small>`):'<span class="pill warn">In progress</span>'}
+    ${subj&&a.state==='submitted'?`<button class="btn sm" data-a="wkgrade" data-pid="${esc(p.id)}" data-uid="${esc(a.userId)}">${a.pending?'Check answers':'Edit marks'}</button>`:''}
     <button class="btn line sm" data-a="wkretake" data-pid="${esc(p.id)}" data-uid="${esc(a.userId)}" data-n="${esc(a.name)}">Allow retake</button></div></div>`).join(''):`<div class="empty"><b>No attempts yet</b></div>`}</div>
   ${r.notAttempted.length?`<div class="card"><div class="sec"><h3>Not started yet</h3></div><p class="hint">${r.notAttempted.map(s=>esc(s.name)+(s.grade?' ('+esc(s.grade)+')':'')).join(', ')}</p></div>`:''}`;
+}
+function wkGradeTotal(){const g=WK.grade;return +g.questions.reduce((a,q)=>a+(q.awarded===''||q.awarded==null?0:+q.awarded||0),0).toFixed(2)}
+function wkGradeView(){
+  const g=WK.grade;
+  return `<div class="card"><button class="link" data-a="wkgback">&larr; Back to results</button><h3 style="font-size:18px;margin:8px 0 4px">${esc(g.student.name)}</h3>
+  <p class="hint" style="margin:0">@${esc(g.student.username)}${g.student.grade?' &middot; '+esc(g.student.grade):''} &middot; ${esc(g.paper.title)}${g.late?' &middot; <b style="color:var(--bad)">Submitted late</b>':''}</p>
+  <div class="kv"><span>Total</span><b><span id="wkgtot">${wkGradeTotal()}</span> / ${g.paper.totalMarks}</b></div></div>
+  ${g.questions.map((q,i)=>`<div class="card"><div class="kv" style="margin:0 0 8px"><b>Question ${i+1}</b><span class="pill pu">${q.marks} marks</span></div>
+    <p style="font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${esc(q.q)}</p>
+    <div class="f" style="margin-bottom:8px"><span>Student's answer</span><div style="border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap;word-break:break-word">${q.answer.trim()?esc(q.answer):'<i style="color:var(--mut)">Not answered</i>'}</div></div>
+    ${q.key?`<div class="f" style="margin-bottom:8px"><span>Model answer</span><div style="border:1px dashed var(--ok);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.key)}</div></div>`:''}
+    <div class="grid2"><label class="f"><span>Marks (0 to ${q.marks})</span><input type="number" min="0" max="${q.marks}" step="0.25" data-wkg="${i}|m" value="${esc(q.awarded)}"></label>
+    <label class="f"><span>Comment (optional)</span><input data-wkg="${i}|c" value="${esc(q.comment)}" maxlength="500"></label></div></div>`).join('')}
+  <div class="card"><label class="f"><span>Overall feedback for the student (optional)</span><textarea rows="3" data-wkg="feedback" maxlength="1000">${esc(g.feedback)}</textarea></label>
+  <div class="acts"><button class="btn" data-a="wkgsave">${I('check',16)} Save marks</button><button class="btn line" data-a="wkgback">Cancel</button></div></div>`;
 }
 
 /* ---------- Student ---------- */
@@ -943,9 +1048,11 @@ function pgWeekly(){
   if(WKS.err)return top+`<div class="card empty"><b>Could not load</b>${esc(WKS.err)}</div>`;
   if(!WKS.papers.length)return top+`<div class="card empty"><b>No weekly test yet</b>When your teacher publishes the weekly test, it will show up here.</div>`;
   return `<p class="hint">The weekly test is separate from practice. You can take each weekly test only once.</p>`+wkSummary()+top+WKS.papers.map(p=>{
-    const meta=`${esc(p.subject||'Weekly test')} &middot; ${p.questionCount} questions &middot; ${p.minutes?p.minutes+' min':'No time limit'} &middot; ${p.totalMarks} marks`;
+    const meta=`${wkKindPill(p.kind)} ${esc(p.subject||'Weekly test')} &middot; ${p.questionCount} questions &middot; ${p.minutes?p.minutes+' min':'No time limit'} &middot; ${p.totalMarks} marks`;
     let body='';
-    if(p.state==='submitted'){const r=p.result;body=`<div class="kv" style="margin:8px 0"><span>Your score</span><b>${r.score}/${r.totalMarks} (${r.percent}%)</b></div><div class="acts">${r.passed?'<span class="pill ok">Passed</span>':'<span class="pill bad">Not passed</span>'}${p.canReview?`<button class="btn line sm" data-a="wkresult" data-id="${esc(p.id)}">View answers</button>`:''}</div>`}
+    if(p.state==='submitted'&&p.result&&p.result.hidden)body=`<div class="acts" style="margin-top:8px"><span class="pill warn">Submitted. Result will show after your teacher publishes it</span></div>`;
+    else if(p.state==='submitted'&&p.pending)body=`<div class="acts" style="margin-top:8px"><span class="pill warn">Submitted. Waiting for your teacher to check</span></div>`;
+    else if(p.state==='submitted'){const r=p.result;body=`<div class="kv" style="margin:8px 0"><span>Your score</span><b>${r.score}/${r.totalMarks} (${r.percent}%)</b></div><div class="acts">${r.passed?'<span class="pill ok">Passed</span>':'<span class="pill bad">Not passed</span>'}${p.canReview?`<button class="btn line sm" data-a="wkresult" data-id="${esc(p.id)}">${p.kind==='subjective'?'View marks and feedback':'View answers'}</button>`:''}</div>`}
     else if(p.state==='in_progress')body=`<div class="acts" style="margin-top:8px"><span class="pill warn">In progress</span><button class="btn" data-a="wkstart" data-id="${esc(p.id)}">Resume test</button></div>`;
     else if(p.state==='closed')body=`<div class="acts" style="margin-top:8px"><span class="pill">Closed</span></div>`;
     else body=`<div class="acts" style="margin-top:8px"><button class="btn" data-a="wkstart" data-id="${esc(p.id)}">${I('bolt',16)} Start test</button></div>`;
@@ -955,74 +1062,114 @@ function pgWeekly(){
 
 /* Weekly summary (alag hai: practice, Test History aur Leaderboard mein shamil nahi) */
 function wkSummary(){
-  const d=WKS.papers.filter(p=>p.state==='submitted'&&p.result);
-  if(!d.length)return '';
-  const c=d.reduce((a,p)=>a+p.result.correct,0),n=d.reduce((a,p)=>a+p.result.total,0);
+  const all=WKS.papers.filter(p=>p.state==='submitted'&&p.result&&!p.result.hidden);
+  if(!all.length)return '';
+  const d=all.filter(p=>!p.pending),pend=all.length-d.length;
+  const waiting=pend?`<p class="hint" style="margin:8px 0 0">${pend} test${pend>1?'s are':' is'} waiting for your teacher to check. ${d.length?'':'Your summary will appear after checking.'}</p>`:'';
+  if(!d.length)return `<div class="card"><div class="sec"><h3>My weekly summary</h3></div>${waiting}</div>`;
+  const c=+d.reduce((a,p)=>a+p.result.score,0).toFixed(2),n=+d.reduce((a,p)=>a+p.result.totalMarks,0).toFixed(2);
   const acc=n?Math.round(c/n*1000)/10:0;
   const avg=Math.round(d.reduce((a,p)=>a+p.result.percent,0)/d.length*10)/10;
   const best=d.reduce((m,p)=>p.result.percent>m.result.percent?p:m,d[0]);
   const passed=d.filter(p=>p.result.passed).length;
   const by={};
-  d.forEach(p=>{const k=(p.subject||'').trim()||'General';const o=by[k]||(by[k]={sub:k,c:0,n:0,t:0});o.c+=p.result.correct;o.n+=p.result.total;o.t++});
+  d.forEach(p=>{const k=(p.subject||'').trim()||'General';const o=by[k]||(by[k]={sub:k,c:0,n:0,t:0});o.c+=p.result.score;o.n+=p.result.totalMarks;o.t++});
   const subs=Object.values(by).map(o=>({...o,p:o.n?Math.round(o.c/o.n*100):0})).sort((a,b)=>b.p-a.p);
   return `<div class="card"><div class="sec"><h3>My weekly summary</h3><span class="pill pu">${passed}/${d.length} passed</span></div>
   <div class="grid2">
-  <div class="card stat" style="background:var(--tint)"><span>Tests taken</span><b>${d.length}</b></div>
-  <div class="card stat" style="background:var(--tint)"><span>Overall accuracy</span><b>${acc}%</b><small>${c} of ${n} correct</small></div>
+  <div class="card stat" style="background:var(--tint)"><span>Tests taken</span><b>${all.length}</b></div>
+  <div class="card stat" style="background:var(--tint)"><span>Overall accuracy</span><b>${acc}%</b><small>${c} of ${n} marks</small></div>
   <div class="card stat" style="background:var(--tint)"><span>Average score</span><b>${avg}%</b><small>per test</small></div>
   <div class="card stat" style="background:var(--tint)"><span>Best score</span><b>${best.result.percent}%</b><small>${esc(best.title)}</small></div></div>
   <div class="kv"><span>Overall weekly accuracy</span><b>${acc}%</b></div><div class="bar"><i style="width:${acc}%;background:${rcol(acc)}"></i></div>
   <div class="hh" style="margin-top:16px">Subject-wise accuracy</div>
   ${subs.map(o=>`<div class="kv" style="margin-top:0"><span>${esc(o.sub)} &middot; ${o.t} test${o.t>1?'s':''}</span><b>${o.p}%</b></div><div class="bar" style="margin-bottom:10px"><i style="width:${o.p}%;background:${rcol(o.p)}"></i></div>`).join('')}
-  <p class="hint" style="margin:6px 0 0">Ye hisaab sirf weekly tests ka hai. Practice, Test History aur Leaderboard mein shamil nahi.</p></div>`;
+  ${waiting}<p class="hint" style="margin:6px 0 0">Ye hisaab sirf weekly tests ka hai (checked tests ke marks ke hisab se). Practice, Test History aur Leaderboard mein shamil nahi.</p></div>`;
 }
-
 function pgWkRun(){
   if(!wkrun)return `<div class="card empty"><b>No test open</b><div class="acts" style="justify-content:center"><button class="btn" data-a="go" data-r="weekly">Weekly Test</button></div></div>`;
+  const subj=wkrun.kind==='subjective';
   if(wkrun.view==='result'){
-    const r=wkrun.result,p=Math.round(r.percent);
-    const head=`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;margin-bottom:12px"><div class="ring" style="--p:${p};--col:${rcol(p)};width:96px;height:96px"><span style="width:76px;height:76px;font-size:22px">${p}%</span></div></div>
-    <h2 style="font-size:22px">${r.passed?'Well done, you passed':'Test submitted'}</h2>
-    <p class="hint" style="margin-top:6px">${esc(wkrun.title||'')}<br>${r.correct} correct out of ${r.total} &middot; ${r.score}/${r.totalMarks} marks${r.late?'<br>Submitted after the time limit.':''}</p>
+    const r=wkrun.result;
+    if(r.hidden)return `<div class="card" style="text-align:center"><h2 style="font-size:22px">Test submitted</h2><p class="hint" style="margin-top:8px">${esc(wkrun.title||'')}<br>Your answers are saved. Your result will appear in Weekly Test after your teacher publishes the results.${r.late?'<br>Submitted after the time limit.':''}</p>
     <div class="acts" style="justify-content:center"><button class="btn line" data-a="go" data-r="weekly">Back to Weekly Test</button></div></div>`;
-    if(!r.review)return head+`<p class="hint">Your teacher will share the correct answers later.</p>`;
+    if(r.pending)return `<div class="card" style="text-align:center"><h2 style="font-size:22px">Test submitted</h2><p class="hint" style="margin-top:8px">${esc(wkrun.title||'')}<br>Your teacher will check your answers. You will see your marks in Weekly Test after checking.${r.late?'<br>Submitted after the time limit.':''}</p>
+    <div class="acts" style="justify-content:center"><button class="btn line" data-a="go" data-r="weekly">Back to Weekly Test</button></div></div>`;
+    const p=Math.round(r.percent);
+    const line=r.kind==='subjective'?`${r.score}/${r.totalMarks} marks`:`${r.correct} correct out of ${r.total} &middot; ${r.score}/${r.totalMarks} marks`;
+    const head=`<div class="card" style="text-align:center"><div style="display:flex;justify-content:center;margin-bottom:12px"><div class="ring" style="--p:${p};--col:${rcol(p)};width:96px;height:96px"><span style="width:76px;height:76px;font-size:22px">${p}%</span></div></div>
+    <h2 style="font-size:22px">${r.passed?'Well done, you passed':(r.kind==='subjective'?'Your test is checked':'Test submitted')}</h2>
+    <p class="hint" style="margin-top:6px">${esc(wkrun.title||'')}<br>${line}${r.late?'<br>Submitted after the time limit.':''}</p>
+    ${r.feedback?`<div class="card" style="background:var(--tint);text-align:left;margin-top:8px"><small style="color:var(--mut)">Teacher's feedback</small><div style="font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(r.feedback)}</div></div>`:''}
+    <div class="acts" style="justify-content:center"><button class="btn line" data-a="go" data-r="weekly">Back to Weekly Test</button></div></div>`;
+    if(!r.review)return head+(r.kind==='subjective'?'':`<p class="hint">Your teacher will share the correct answers later.</p>`);
+    if(r.kind==='subjective')return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span><span class="pill ${q.awarded>=q.marksMax?'ok':q.awarded>0?'warn':'bad'}">${q.awarded}/${q.marksMax}</span></div><h3>${esc(q.q)}</h3>
+      <div class="f" style="margin-bottom:8px"><span>Your answer</span><div style="border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap;word-break:break-word">${q.answer.trim()?esc(q.answer):'<i style="color:var(--mut)">Not answered</i>'}</div></div>
+      ${q.comment?`<div class="f" style="margin-bottom:8px"><span>Teacher's comment</span><div style="font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.comment)}</div></div>`:''}
+      ${q.key?`<div class="f" style="margin-bottom:0"><span>Model answer</span><div style="border:1px dashed var(--ok);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.key)}</div></div>`:''}</div>`).join('');
     return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span>${q.chosen===q.ans?'<span class="pill ok">Correct</span>':q.chosen?'<span class="pill bad">Wrong</span>':'<span class="pill warn">Not answered</span>'}</div><h3>${esc(q.q)}</h3>
     ${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===q.chosen?'wrong':''}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</div>`).join('')}</div>`).join('');
   }
   const q=wkrun.qs[wkrun.i],sel=wkrun.ans[wkrun.i],last=wkrun.i===wkrun.qs.length-1;
   return `<div class="card q"><div class="kv" style="margin:0 0 8px"><span>${esc(wkrun.title||'Weekly test')} ${wkrun.end?`<span class="pill warn" id="wktmr">${fmtT(wkrun.end-Date.now())}</span>`:''}</span><b>${wkrun.i+1} / ${wkrun.qs.length}</b></div>
   <div class="bar"><i style="width:${(wkrun.i+1)/wkrun.qs.length*100}%;background:var(--acc)"></i></div>
-  <h3>${esc(q.q)}</h3>
-  ${[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="wkpick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</button>`).join('')}
+  <h3 style="white-space:pre-wrap">${esc(q.q)}</h3>
+  ${subj?`<span class="pill pu" style="margin-bottom:10px">${esc(q.marks)} marks</span><textarea data-wka="1" rows="10" maxlength="5000" placeholder="Write your answer here" style="width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font-size:14px;line-height:1.5;margin-bottom:10px;resize:vertical">${esc(sel||'')}</textarea>`
+  :[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="wkpick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</button>`).join('')}
   <div style="display:flex;justify-content:space-between;margin-top:6px;gap:8px"><button class="btn line" data-a="wkprev" ${wkrun.i?'':'disabled'}>Previous</button>
   ${last?`<button class="btn" data-a="wkfinish">Submit test</button>`:`<button class="btn" data-a="wknext">Next</button>`}</div></div>`;
 }
 async function wkFinish(auto){
   if(!wkrun||wkrun.busy||wkrun.view!=='take')return;
-  if(!auto){const un=wkrun.qs.filter((q,i)=>!wkrun.ans[i]).length;if(!confirm((un?'You have '+un+' unanswered question(s). ':'')+'Submit the test now? You cannot retake it.'))return}
+  const subjR=wkrun.kind==='subjective';
+  if(!auto){const un=wkrun.qs.filter((q,i)=>!(subjR?String(wkrun.ans[i]||'').trim():wkrun.ans[i])).length;if(!confirm((un?'You have '+un+' unanswered question(s). ':'')+'Submit the test now? You cannot retake it.'))return}
   wkrun.busy=true;
-  try{const ans=wkrun.qs.map((q,i)=>wkrun.ans[i]||0);const d=await api('/api/weekly/'+encodeURIComponent(wkrun.id)+'/submit',{method:'POST',body:JSON.stringify({answers:ans})});wkrun.result=d;wkrun.view='result';WKS.loaded=false;S.route='wkrun';window.scrollTo(0,0);render()}
+  try{const ans=wkrun.qs.map((q,i)=>wkrun.ans[i]||(subjR?'':0));const d=await api('/api/weekly/'+encodeURIComponent(wkrun.id)+'/submit',{method:'POST',body:JSON.stringify({answers:ans})});wkrun.result=d;wkrun.view='result';WKS.loaded=false;S.route='wkrun';window.scrollTo(0,0);render()}
   catch(e){wkrun.busy=false;wkrun.retryAt=Date.now()+5000;toast(e.message)}
 }
 Object.assign(A,{
   /* admin */
   wknew:()=>{WK.edit=wkBlank();WK.view='edit';render();window.scrollTo(0,0)},
-  wkedit:d=>{const p=WK.papers.find(x=>x.id===d.id);if(!p)return;WK.edit=clone(p);if(!WK.edit.questions.length)WK.edit.questions.push(wkBlankQ());WK.view='edit';render();window.scrollTo(0,0)},
+  wkedit:d=>{const p=WK.papers.find(x=>x.id===d.id);if(!p)return;WK.edit=clone(p);WK.edit.kind=p.kind||'objective';if(!WK.edit.questions.length)WK.edit.questions.push(wkBlankQ(WK.edit.kind));WK.view='edit';render();window.scrollTo(0,0)},
   wkcancel:()=>{WK.view='list';WK.edit=null;render()},
   wkback:()=>{WK.view='list';WK.res=null;render()},
   wkrefresh:()=>{WK.loaded=false;render()},
-  wkqadd:()=>{WK.edit.questions.push(wkBlankQ());render()},
-  wkqdel:d=>{if(!confirm('Delete this question?'))return;WK.edit.questions.splice(+d.i,1);if(!WK.edit.questions.length)WK.edit.questions.push(wkBlankQ());render()},
+  wkqadd:()=>{WK.edit.questions.push(wkBlankQ(WK.edit.kind));render()},
+  wkkind:d=>{const e=WK.edit;if(!e||e.kind===d.v)return;if(e.questions.some(q=>(q.q||'').trim())&&!confirm('Changing the paper type clears the questions you have typed. Continue?'))return;e.kind=d.v;e.questions=[wkBlankQ(d.v)];if(d.v==='subjective')e.shuffle=false;else e.shuffle=true;render()},
+  wkqdel:d=>{if(!confirm('Delete this question?'))return;WK.edit.questions.splice(+d.i,1);if(!WK.edit.questions.length)WK.edit.questions.push(wkBlankQ(WK.edit.kind));render()},
   wkimport:()=>{const r=wkParse($('#wkbulk').value);if(!r.out.length){toast(r.bad?r.bad+' lines skipped. Check the format.':'Paste some questions first');return}
     const qs=WK.edit.questions;if(qs.length===1&&!qs[0].q&&!qs[0].o1)qs.length=0;r.out.forEach(x=>qs.push(x));render();toast(r.out.length+' questions added'+(r.bad?', '+r.bad+' lines skipped':''))},
   wksave:async d=>{
-    const e=WK.edit;if(!e.title.trim()){toast('Enter a paper title');return}
-    const qs=e.questions.filter(q=>q.q.trim()||q.o1.trim()||q.o2.trim()||q.o3.trim()||q.o4.trim());
-    for(let i=0;i<qs.length;i++){const q=qs[i];if(!q.q.trim()||!q.o1.trim()||!q.o2.trim()||!q.o3.trim()||!q.o4.trim()){toast('Question '+(i+1)+' needs the question and all 4 options');return}}
+    const e=WK.edit,subj=e.kind==='subjective';if(!e.title.trim()){toast('Enter a paper title');return}
+    let qs;
+    if(subj){
+      qs=e.questions.filter(q=>(q.q||'').trim()||String(q.key||'').trim());
+      for(let i=0;i<qs.length;i++){const q=qs[i];if(!(q.q||'').trim()){toast('Question '+(i+1)+' needs the question text');return}if(!(+q.marks>=0.25&&+q.marks<=100)){toast('Question '+(i+1)+' needs marks between 0.25 and 100');return}}
+      qs=qs.map(q=>({q:q.q,marks:+q.marks,key:q.key||''}));
+    }else{
+      qs=e.questions.filter(q=>q.q.trim()||q.o1.trim()||q.o2.trim()||q.o3.trim()||q.o4.trim());
+      for(let i=0;i<qs.length;i++){const q=qs[i];if(!q.q.trim()||!q.o1.trim()||!q.o2.trim()||!q.o3.trim()||!q.o4.trim()){toast('Question '+(i+1)+' needs the question and all 4 options');return}}
+    }
     const status=d.s==='keep'?e.status:d.s;
     if(status==='published'&&!qs.length){toast('Add at least one question before publishing');return}
-    try{await api('/api/weekly/admin',{method:'POST',body:JSON.stringify({id:e.id,title:e.title,subject:e.subject,minutes:+e.minutes||0,marksPerQ:+e.marksPerQ||1,passPct:e.passPct===''?50:+e.passPct,to:e.to,status,showAnswers:!!e.showAnswers,shuffle:e.shuffle!==false,questions:qs})});
-      WK.view='list';WK.edit=null;WK.loaded=false;render();toast(status==='published'?'Paper published':'Paper saved')}catch(err){toast(err.message)}},
+    try{await api('/api/weekly/admin',{method:'POST',body:JSON.stringify({id:e.id,kind:e.kind,title:e.title,subject:e.subject,minutes:+e.minutes||0,marksPerQ:+e.marksPerQ||1,passPct:e.passPct===''?50:+e.passPct,to:e.to,status,showAnswers:!!e.showAnswers,shuffle:!subj&&e.shuffle!==false,questions:qs})});
+      WK.view='list';WK.edit=null;WK.loaded=false;render();toast(status==='published'?'Paper published':'Paper saved')}catch(err){toast(err.message,5000)}},
+  wkpub:async d=>{
+    const pub=d.v==='1',pp=WK.papers.find(x=>x.id===d.id),r=WK.res&&WK.res.paper&&WK.res.paper.id===d.id?WK.res:null;let warn=[];
+    if(pub){
+      if(r){const sub=r.attempts.filter(a=>a.state==='submitted'),pend=sub.filter(a=>a.pending).length,miss=r.paper.assigned-sub.length;if(miss>0)warn.push(miss+' student'+(miss>1?'s have':' has')+' not submitted yet');if(pend>0)warn.push(pend+' paper'+(pend>1?'s are':' is')+' not checked yet')}
+      else if(pp){const miss=pp.assigned-pp.submitted;if(miss>0)warn.push(miss+' student'+(miss>1?'s have':' has')+' not submitted yet');if(pp.kind==='subjective'&&pp.ungraded>0)warn.push(pp.ungraded+' paper'+(pp.ungraded>1?'s are':' is')+' not checked yet')}
+    }
+    const msg=pub?(warn.length?warn.join(' and ')+'.\n\n':'')+'Publish results now? Students will be able to see their marks.':'Hide the results from students again?';
+    if(!confirm(msg))return;
+    try{await api('/api/weekly/admin/'+encodeURIComponent(d.id)+'/results-publish',{method:'POST',body:JSON.stringify({publish:pub})});WK.loaded=false;
+      if(r)await wkOpenResults(d.id);else render();toast(pub?'Results published. Students can see them now':'Results hidden from students')}catch(e){toast(e.message,5000)}},
+  wkgrade:async d=>{try{const g=await api('/api/weekly/admin/'+encodeURIComponent(d.pid)+'/attempts/'+encodeURIComponent(d.uid));g.pid=d.pid;WK.grade=g;WK.view='grade';render();window.scrollTo(0,0)}catch(e){toast(e.message)}},
+  wkgback:()=>{const id=WK.grade&&WK.grade.pid;WK.grade=null;if(id)wkOpenResults(id);else{WK.view='list';render()}},
+  wkgsave:async()=>{const g=WK.grade;if(!g)return;
+    for(let i=0;i<g.questions.length;i++){const q=g.questions[i];if(q.awarded===''||q.awarded==null){toast('Enter marks for question '+(i+1)+' (0 if none)');return}if(!(+q.awarded>=0&&+q.awarded<=+q.marks)){toast('Question '+(i+1)+': marks must be between 0 and '+q.marks);return}}
+    try{await api('/api/weekly/admin/'+encodeURIComponent(g.pid)+'/attempts/'+encodeURIComponent(g.student.userId),{method:'PUT',body:JSON.stringify({marks:g.questions.map(q=>+q.awarded),comments:g.questions.map(q=>q.comment||''),feedback:g.feedback||''})});
+      toast('Marks saved. '+g.student.name+' can now see the result');const id=g.pid;WK.grade=null;wkOpenResults(id)}catch(e){toast(e.message,5000)}},
   wkstatus:async d=>{try{await api('/api/weekly/admin/'+encodeURIComponent(d.id)+'/status',{method:'PATCH',body:JSON.stringify({status:d.s})});WK.loaded=false;render();toast(d.s==='published'?'Paper is now live for students':'Test closed')}catch(e){toast(e.message)}},
   wkdel:async d=>{const p=WK.papers.find(x=>x.id===d.id);if(!p||!confirm('Delete "'+p.title+'"? All student results for it will be deleted too.'))return;
     try{await api('/api/weekly/admin/'+encodeURIComponent(d.id),{method:'DELETE'});WK.loaded=false;render();toast('Paper deleted')}catch(e){toast(e.message)}},
@@ -1032,7 +1179,7 @@ Object.assign(A,{
   wkretake:async d=>{if(!confirm('Allow '+d.n+' to take this test again? Their current result will be deleted.'))return;
     try{await api('/api/weekly/admin/'+encodeURIComponent(d.pid)+'/attempts/'+encodeURIComponent(d.uid),{method:'DELETE'});toast('Done. '+d.n+' can retake the test');wkOpenResults(d.pid)}catch(e){toast(e.message)}},
   wkcsv:()=>{const r=WK.res;if(!r)return;const rows=[['Name','Username','Class','Score','Total marks','Percent','Result','Submitted']];
-    r.attempts.forEach(a=>rows.push([a.name,a.username,a.grade,a.state==='submitted'?a.score:'',a.state==='submitted'?a.totalMarks:'',a.state==='submitted'?a.percent:'',a.state==='submitted'?(a.passed?'Passed':'Not passed'):'In progress',a.state==='submitted'?wkFmt(a.submittedAt):'']));
+    r.attempts.forEach(a=>rows.push([a.name,a.username,a.grade,a.score??'',a.state==='submitted'?a.totalMarks:'',a.percent??'',a.state==='submitted'?(a.pending?'Needs checking':(a.passed?'Passed':'Not passed')):'In progress',a.state==='submitted'?wkFmt(a.submittedAt):'']));
     r.notAttempted.forEach(s=>rows.push([s.name,'',s.grade,'','','','Not started','']));
     const csv=rows.map(x=>x.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=(r.paper.title||'weekly-results').replace(/[^a-z0-9]+/gi,'-')+'.csv';a.click();toast('CSV downloaded')},
@@ -1041,8 +1188,8 @@ Object.assign(A,{
   wkstart:async d=>{const p=WKS.papers.find(x=>x.id===d.id);if(!p)return;
     if(p.state==='none'&&!confirm('Start "'+p.title+'"?\n\nYou can take this test only once.'+(p.minutes?'\nTime limit: '+p.minutes+' minutes. The timer starts now.':'')))return;
     try{const r=await api('/api/weekly/'+encodeURIComponent(p.id)+'/start',{method:'POST'});
-      const ans=(r.answers||[]).map(x=>x||0),first=r.questions.findIndex((q,i)=>!ans[i]);
-      wkrun={id:r.id,title:r.title,qs:r.questions,ans,i:first<0?0:first,view:'take',end:r.endsAt?Date.now()+(r.endsAt-r.serverNow):0};
+      const subjR=r.kind==='subjective',ans=(r.answers||[]).map(x=>subjR?String(x||''):(x||0)),first=r.questions.findIndex((q,i)=>!ans[i]);
+      wkrun={id:r.id,kind:r.kind||'objective',title:r.title,qs:r.questions,ans,i:first<0?0:first,view:'take',end:r.endsAt?Date.now()+(r.endsAt-r.serverNow):0};
       go('wkrun')}catch(e){toast(e.message);WKS.loaded=false;render()}},
   wkresult:async d=>{try{const r=await api('/api/weekly/'+encodeURIComponent(d.id)+'/result'),p=WKS.papers.find(x=>x.id===d.id);wkrun={id:d.id,title:p?p.title:'',view:'result',result:r};go('wkrun')}catch(e){toast(e.message)}},
   wkpick:d=>{if(!wkrun)return;wkrun.ans[wkrun.i]=+d.v;render();clearTimeout(wkSaveT);const id=wkrun.id;
@@ -1054,8 +1201,10 @@ Object.assign(A,{
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset.ss&&ui.ss){ui.ss[t.dataset.ss]=t.value;return}
+  if(t.dataset.wka!==undefined&&wkrun&&wkrun.view==='take'){wkrun.ans[wkrun.i]=t.value;clearTimeout(wkSaveT);const id=wkrun.id;wkSaveT=setTimeout(()=>{if(!wkrun||wkrun.id!==id||wkrun.view!=='take')return;api('/api/weekly/'+encodeURIComponent(id)+'/save',{method:'POST',body:JSON.stringify({answers:wkrun.qs.map((q,i)=>wkrun.ans[i]||'')})}).catch(()=>{})},1500);return}
+  if(t.dataset.wkg!==undefined&&WK.grade){const k=t.dataset.wkg;if(k==='feedback')WK.grade.feedback=t.value;else{const[i,f]=k.split('|'),q=WK.grade.questions[+i];if(q){if(f==='m')q.awarded=t.value===''?'':+t.value;else q.comment=t.value;const el=$('#wkgtot');if(el)el.textContent=wkGradeTotal()}}return}
   if(t.dataset.wk&&WK.edit){WK.edit[t.dataset.wk]=t.type==='checkbox'?t.checked:t.type==='number'?(t.value===''?'':+t.value):t.value;return}
-  if(t.dataset.wkq&&WK.edit){const[i,f]=t.dataset.wkq.split('|'),q=WK.edit.questions[+i];if(q)q[f]=f==='ans'?+t.value:t.value;return}
+  if(t.dataset.wkq&&WK.edit){const[i,f]=t.dataset.wkq.split('|'),q=WK.edit.questions[+i];if(q)q[f]=f==='ans'?+t.value:f==='marks'?(t.value===''?'':+t.value):t.value;return}
 },true);
 setInterval(()=>{
   if(!wkrun||wkrun.view!=='take'||!wkrun.end)return;
@@ -1094,7 +1243,7 @@ setInterval(()=>{
   const left=run.end-Date.now(),el=$('#tmr');if(el)el.textContent=fmtT(left);
   if(left<=0){toast('Time is up');finishRun()}
 },1000);
-document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const i=e.target.id;if(i==='lp')A[ui.lt==='admin'?'alogin':'login']();else if(i==='sp')A.setup();else if(i==='cp2')A.signup()});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const i=e.target.id;if(i==='lp')A[ui.lt==='admin'?'alogin':'login']();else if(i==='fpu')A.fpsend();else if(i==='fpo')A.fpverify();else if(i==='fpp2')A.fpreset();else if(i==='sp')A.setup();else if(i==='cp2')A.signup()});
 async function brandLogin(){
   try{const r=await fetch('/api/brand');if(!r.ok)return;const b=await r.json();
     if(b.name&&b.done){S.brand.name=b.name;S.brand.short=b.short||S.brand.short;S.brand.logo=b.logo||'';['c1','c2','c3','acc'].forEach(k=>{if(b[k])S.brand[k]=b[k]})}}catch(e){}
