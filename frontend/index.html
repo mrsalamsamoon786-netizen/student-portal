@@ -93,6 +93,14 @@ html[data-dark] .lrow.me{background:#2d2231}
 .opt.sel{border-color:var(--acc);background:#fff3e8;color:#17141f}
 .opt.right{border-color:var(--ok);background:#e3f6ee;color:#0d6e49}
 .opt.wrong{border-color:var(--bad);background:#fdeaea;color:#a02126}
+.qimg{display:block;max-width:100%;max-height:320px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fff;margin:8px 0}
+.opt .ot{flex:1;min-width:0}
+.opt .ot .qimg{max-height:200px;margin:8px 0 0}
+.imgbox{margin:2px 0 12px}
+.imgbox .qimg{max-height:150px;margin:6px 0}
+.imgbox .btn{margin-right:6px}
+#zoomov{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:12px}
+#zoomov img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;background:#fff}
 .empty{text-align:center;color:var(--mut);padding:28px 10px;font-size:14px}
 .empty b{display:block;color:var(--ink);margin-bottom:4px}
 .f{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--mut)}
@@ -645,8 +653,8 @@ function pgRun(){
   const q=run.qs[run.i],sel=run.ans[run.i],last=run.i===run.qs.length-1;
   return `<div class="card q"><div class="kv" style="margin:0 0 8px"><span>${esc(run.subject)} ${run.end?`<span class="pill warn" id="tmr">${fmtT(run.end-Date.now())}</span>`:''}</span><b>${run.i+1} / ${run.qs.length}</b></div>
   <div class="bar"><i style="width:${(run.i+1)/run.qs.length*100}%;background:var(--acc)"></i></div>
-  <h3>${esc(q.q)}</h3>
-  ${[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="pick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</button>`).join('')}
+  <h3>${esc(q.q)}</h3>${qimg(q.qi,1)}
+  ${[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="pick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${optHTML(q,n)}</button>`).join('')}
   <div style="display:flex;justify-content:space-between;margin-top:6px"><button class="btn line" data-a="quit">Quit</button>
   <button class="btn" data-a="next" ${sel?'':'disabled'}>${last?'Finish':'Next'}</button></div></div>`;
 }
@@ -656,7 +664,7 @@ function pgReview(){
   if(!t||!t.qs)return `<div class="card empty"><b>No answer data</b>Review is available for tests you take inside this portal.</div>`;
   return `<div class="card"><div class="sec"><h3>${esc(t.title)}</h3><span class="pill ${t.status==='Passed'?'ok':'bad'}">${t.status==='Passed'?'Pass':'Fail'} &middot; ${t.correct}/${t.total}</span></div></div>`+
   t.qs.map((q,i)=>{const a=t.ans[i];return `<div class="card q"><div class="kv" style="margin:0"><span>Question ${i+1}</span>${a===q.ans?'<span class="pill ok">Correct</span>':'<span class="pill bad">Wrong</span>'}</div>
-  <h3>${esc(q.q)}</h3>${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===a?'wrong':''}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</div>`).join('')}</div>`}).join('');
+  <h3>${esc(q.q)}</h3>${qimg(q.qi,1)}${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===a?'wrong':''}"><i>${'ABCD'[n-1]}</i>${optHTML(q,n)}</div>`).join('')}</div>`}).join('');
 }
 
 function pgReports(){
@@ -1174,14 +1182,14 @@ function noteFilesHTML(i,row){
 }
 function rowHTML(name,i){
   const cfg=SCHEMA[name],row=S[name][i];
-  return `<div class="rowed"><div class="rh"><span>#${i+1}</span><button data-a="del" data-c="${name}" data-i="${i}" aria-label="Delete">${I('trash',16)}</button></div>${cfg.f.map(([k,l,t])=>{
+  return `<div class="rowed"><div class="rh"><span>#${i+1}</span><button data-a="del" data-c="${name}" data-i="${i}" aria-label="Delete">${I('trash',16)}</button></div>${cfg.f.map(([k,l,t])=>{const _s=((k,l,t)=>{
     const at=`data-c="${name}" data-i="${i}" data-f="${k}"`;
     if(t==='area')return `<label class="f"><span>${l}</span><textarea rows="2" ${at}>${esc(row[k])}</textarea></label>`;
     if(t==='chapter')return `<label class="f"><span>${l}</span><select ${at}>${chapOptions(row.subject,row[k])}</select></label>`;
     if(t==='subject')return `<label class="f"><span>${l}</span><select ${at}>${S.subjects.map(x=>`<option ${row[k]===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
     if(t==='to'){const o=toOptions(),cur=row[k]||'all';return `<label class="f"><span>${l}</span><select ${at}>${o.map(([v,lab])=>`<option value="${esc(v)}" ${cur===v?'selected':''}>${esc(lab)}</option>`).join('')}${o.some(x=>x[0]===cur)?'':`<option value="${esc(cur)}" selected>${esc(cur)}</option>`}</select></label>`}
     if(t==='status')return `<label class="f"><span>${l}</span><select ${at}>${['Passed','Failed','In Progress'].map(x=>`<option ${row[k]===x?'selected':''}>${x}</option>`).join('')}</select></label>`;
-    return fld(l,at,row[k],t||'text')}).join('')}${name==='assigned'?hintAssigned(row):''}${name==='notes'?noteFilesHTML(i,row):''}</div>`;
+    return fld(l,at,row[k],t||'text')})(k,l,t);return _s+(name==='questions'&&IMGF[k]?imgField('qb',i,IMGF[k],row,false):'')}).join('')}${name==='assigned'?hintAssigned(row):''}${name==='notes'?noteFilesHTML(i,row):''}</div>`;
 }
 function colEditor(name){
   let idx=S[name].map((_,i)=>i),head='',more='';
@@ -1191,7 +1199,8 @@ function colEditor(name){
       <label class="f" style="margin-top:8px"><span>Subject</span><select id="qa_sub">${S.subjects.map(x=>`<option ${(ui.qsub||S.subjects[0])===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label>
       <label class="f"><span>Chapter</span><select id="qa_ch">${chapOptions(ui.qsub||S.subjects[0],'')}</select></label>
       <label class="f"><span>Question</span><textarea id="qa_q" rows="2"></textarea></label>
-      ${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input id="qa_${n}" autocomplete="off"></label>`).join('')}
+      <div id="qa_img_qi">${qaImgInner('qi')}</div>
+      ${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input id="qa_${n}" autocomplete="off"></label><div id="qa_img_i${n}">${qaImgInner('i'+n)}</div>`).join('')}
       <label class="f"><span>Correct option</span><select id="qa_ans"><option value="1">A</option><option value="2">B</option><option value="3">C</option><option value="4">D</option></select></label>
       <button class="btn" data-a="qadd">Save MCQ</button></div>
       <div class="rowed"><b style="font-size:14px">Import many MCQs at once</b>
@@ -1337,10 +1346,14 @@ const A={
   chdel:d=>{const L=S.chapters[ui.qf]||[],c=L[+d.i];if(!c)return;S.questions.forEach(q=>{if(q.subject===ui.qf&&q.chapter===c.n)q.chapter=''});L.splice(+d.i,1);persist();render()},
   startAssigned:d=>{const a=S.assigned[+d.i];if(a)startRun(a.subject,Math.max(1,+a.count||1),a.title,Math.max(0,+a.minutes||0),false)},
   qmore:()=>{ui.qlim+=15;renderPanel()},
+  zoomimg:d=>{const o=document.createElement('div');o.id='zoomov';o.innerHTML=`<img src="${qimgSrc(d.id)}" alt="">`;o.onclick=()=>o.remove();document.body.appendChild(o)},
+  qimgdel:d=>qimgRemove(d.k),
   qadd:()=>{const g=i=>$(i).value.trim(),sub=g('#qa_sub'),chap=($('#qa_ch')?$('#qa_ch').value:''),q=g('#qa_q'),o=[1,2,3,4].map(i=>g('#qa_'+i)),ans=+$('#qa_ans').value||1;
-    if(!sub||!q||o.some(x=>!x)){toast('Fill the subject, the question and all four options');return}
+    const im=ui.qaImg||{};
+    if(!sub||(!q&&!im.qi)||o.some((x,k)=>!x&&!im['i'+(k+1)])){toast('Fill the subject, the question and all four options (each can be text or a picture)');return}
     if(!S.subjects.includes(sub))S.subjects.push(sub);
-    S.questions.unshift({subject:sub,chapter:chap,q,o1:o[0],o2:o[1],o3:o[2],o4:o[3],ans});ui.qsub=sub;ui.qlim=15;
+    const nq={subject:sub,chapter:chap,q,o1:o[0],o2:o[1],o3:o[2],o4:o[3],ans};['qi','i1','i2','i3','i4'].forEach(f=>{if(im[f])nq[f]=im[f]});ui.qaImg={};
+    S.questions.unshift(nq);ui.qsub=sub;ui.qlim=15;
     toast('MCQ saved. '+sub+' now has '+availOf(sub)+' MCQs');render()},
   sg:d=>{ui.sg=d.v;render()},
   bulk:()=>{const r=importMCQs($('#bulk').value,$('#bsub').value,$('#bch')?$('#bch').value:'');$('#bulk').value='';ui.qlim=15;toast(r.ok+' MCQs imported'+(r.bad?', '+r.bad+' lines skipped':'')+(r.nochap?', '+r.nochap+' without a matching chapter':''));renderPanel();render()},
@@ -1388,6 +1401,45 @@ const A={
     if(!confirm('Delete '+a.name+'?'+(a.role==='student'?' Their results are removed.':'')))return;
     try{await api('/api/admin/accounts/'+encodeURIComponent(a.id),{method:'DELETE'});DB=await api('/api/state');renderPanel();render();toast('Account deleted')}catch(e){toast(e.message)}}
 };
+/* ============ DIAGRAM PICTURES for questions and options (Question bank + Weekly papers) ============ */
+const QIMG_LABELS={qi:'Question picture / diagram',i1:'Option A picture',i2:'Option B picture',i3:'Option C picture',i4:'Option D picture'};
+const IMGF={q:'qi',o1:'i1',o2:'i2',o3:'i3',o4:'i4'};
+const qimgSrc=id=>API_BASE+'/api/q-images/'+encodeURIComponent(id);
+function qimg(id,zoom){return id?`<img class="qimg" src="${qimgSrc(id)}" alt="Diagram" loading="lazy" ${zoom?`data-a="zoomimg" data-id="${esc(id)}" style="cursor:zoom-in"`:''}>`:''}
+function optHTML(q,n){return `<span class="ot">${q['o'+n]?esc(q['o'+n]):''}${qimg(q['i'+n])}</span>`}
+function qimgPrepare(file){return new Promise((ok,no)=>{
+  if(!/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)){no(new Error('Please choose a JPG, PNG, WEBP or GIF picture'));return}
+  const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{URL.revokeObjectURL(u);let w=im.naturalWidth,h=im.naturalHeight;if(!w||!h){no(new Error('Could not read this picture'));return}
+    const sc=Math.min(1,1600/Math.max(w,h));w=Math.round(w*sc);h=Math.round(h*sc);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+    c.toBlob(b=>b?ok(b):no(new Error('Could not process this picture')),'image/jpeg',.9)};
+  im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Could not read this picture'))};im.src=u})}
+async function qimgUpload(file){
+  const blob=await qimgPrepare(file);
+  if(blob.size>5*1024*1024)throw new Error('Picture is too large. Try a smaller one.');
+  const r=await fetch(API_BASE+'/api/admin/q-images',{method:'POST',credentials:'include',headers:{'Content-Type':'application/octet-stream'},body:blob});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed');return d.id}
+/* k = scope|index|field  (wk = weekly paper, qb = question bank row, qa = "Add one MCQ" form) */
+function imgCtl(k,id,lock){
+  return `<div class="imgbox">${qimg(id)}${lock?'':`${id?`<button class="btn line sm" type="button" data-a="qimgdel" data-k="${esc(k)}">Remove picture</button>`:''}<label class="btn line sm" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">${I('plus',14)} ${id?'Change':'Add'} picture<input type="file" accept="image/*" data-qimg-up="${esc(k)}" hidden></label>`}</div>`}
+function imgField(scope,idx,f,row,lock){
+  const id=row[f]||'';if(lock&&!id)return '';
+  return imgCtl(scope+'|'+idx+'|'+f,id,lock)}
+function qaImgInner(f){return imgCtl('qa|0|'+f,(ui.qaImg||{})[f]||'',false)}
+async function qimgPick(k,file){
+  const[sc,a,b]=k.split('|');toast('Uploading picture...');
+  try{const id=await qimgUpload(file);
+    if(sc==='wk'){const q=WK.edit&&WK.edit.questions[+a];if(q)q[b]=id;render()}
+    else if(sc==='qb'){const q=S.questions[+a];if(q){q[b]=id;persist()}renderPanel()}
+    else{ui.qaImg=ui.qaImg||{};ui.qaImg[b]=id;const el=$('#qa_img_'+b);if(el)el.innerHTML=qaImgInner(b)}
+    toast('Picture added')}catch(e){toast(e.message,5000)}}
+function qimgRemove(k){
+  const[sc,a,b]=k.split('|');
+  if(sc==='wk'){const q=WK.edit&&WK.edit.questions[+a];if(q)delete q[b];render()}
+  else if(sc==='qb'){const q=S.questions[+a];if(q){delete q[b];persist()}renderPanel()}
+  else{if(ui.qaImg)delete ui.qaImg[b];const el=$('#qa_img_'+b);if(el)el.innerHTML=qaImgInner(b)}}
+
 /* ============ WEEKLY TEST: Paper Maker (Admin) + Weekly Test (Students). Separate from the Question bank. ============ */
 const WK={loaded:false,loading:false,papers:[],view:'list',edit:null,res:null,grade:null,err:''};
 const WKS={loaded:false,loading:false,papers:[],err:''};
@@ -1446,10 +1498,11 @@ function wkEditor(){
   const e=WK.edit,lock=(e.attempts||0)>0,dis=lock?'disabled':'',subj=e.kind==='subjective';
   const toOpts=toOptions().map(([v,l])=>`<option value="${esc(v)}" ${e.to===v?'selected':''}>${esc(l)}</option>`).join('');
   const qs=e.questions.map((q,i)=>`<div class="rowed"><div class="rh"><span><b style="color:var(--ink)">Question ${i+1}</b></span>${lock?'':`<button data-a="wkqdel" data-i="${i}" aria-label="Delete question">${I('trash',16)}</button>`}</div>
-    <label class="f"><span>Question</span><textarea rows="${subj?3:2}" data-wkq="${i}|q" ${dis}>${esc(q.q)}</textarea></label>
+    <label class="f"><span>Question (text or picture)</span><textarea rows="${subj?3:2}" data-wkq="${i}|q" ${dis}>${esc(q.q)}</textarea></label>
+    ${imgField('wk',i,'qi',q,lock)}
     ${subj?`<label class="f"><span>Marks for this question</span><input type="number" min="0.25" max="100" step="0.25" data-wkq="${i}|marks" value="${esc(q.marks)}" ${dis}></label>
     <label class="f"><span>Model answer (optional, only you can see it)</span><textarea rows="3" data-wkq="${i}|key" ${dis}>${esc(q.key||'')}</textarea></label>`
-    :`${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]}</span><input data-wkq="${i}|o${n}" value="${esc(q['o'+n])}" ${dis}></label>`).join('')}
+    :`${[1,2,3,4].map(n=>`<label class="f"><span>Option ${'ABCD'[n-1]} (text or picture)</span><input data-wkq="${i}|o${n}" value="${esc(q['o'+n])}" ${dis}></label>${imgField('wk',i,'i'+n,q,lock)}`).join('')}
     <label class="f"><span>Correct option</span><select data-wkq="${i}|ans" ${dis}>${[1,2,3,4].map(n=>`<option value="${n}" ${+q.ans===n?'selected':''}>${'ABCD'[n-1]}</option>`).join('')}</select></label>`}</div>`).join('');
   const total=subj?+e.questions.reduce((a,q)=>a+(+q.marks||0),0).toFixed(2):0;
   return `<div class="card"><h3 style="font-size:18px;margin-bottom:10px">${e.id?'Edit weekly paper':'New weekly paper'}</h3>
@@ -1498,7 +1551,7 @@ function wkGradeView(){
   <p class="hint" style="margin:0">@${esc(g.student.username)}${g.student.grade?' &middot; '+esc(g.student.grade):''} &middot; ${esc(g.paper.title)}${g.late?' &middot; <b style="color:var(--bad)">Submitted late</b>':''}</p>
   <div class="kv"><span>Total</span><b><span id="wkgtot">${wkGradeTotal()}</span> / ${g.paper.totalMarks}</b></div></div>
   ${g.questions.map((q,i)=>`<div class="card"><div class="kv" style="margin:0 0 8px"><b>Question ${i+1}</b><span class="pill pu">${q.marks} marks</span></div>
-    <p style="font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${esc(q.q)}</p>
+    <p style="font-size:14px;line-height:1.5;white-space:pre-wrap;margin-bottom:10px">${esc(q.q)}</p>${qimg(q.qi,1)}
     <div class="f" style="margin-bottom:8px"><span>Student's answer</span><div style="border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap;word-break:break-word">${q.answer.trim()?esc(q.answer):'<i style="color:var(--mut)">Not answered</i>'}</div></div>
     ${q.key?`<div class="f" style="margin-bottom:8px"><span>Model answer</span><div style="border:1px dashed var(--ok);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.key)}</div></div>`:''}
     <div class="grid2"><label class="f"><span>Marks (0 to ${q.marks})</span><input type="number" min="0" max="${q.marks}" step="0.25" data-wkg="${i}|m" value="${esc(q.awarded)}"></label>
@@ -1579,19 +1632,19 @@ function pgWkRun(){
     ${r.feedback?`<div class="card" style="background:var(--tint);text-align:left;margin-top:8px"><small style="color:var(--mut)">Teacher's feedback</small><div style="font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(r.feedback)}</div></div>`:''}
     <div class="acts" style="justify-content:center"><button class="btn line" data-a="go" data-r="weekly">Back to Weekly Test</button></div></div>`;
     if(!r.review)return head+(r.kind==='subjective'?'':`<p class="hint">Your teacher will share the correct answers later.</p>`);
-    if(r.kind==='subjective')return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span><span class="pill ${q.awarded>=q.marksMax?'ok':q.awarded>0?'warn':'bad'}">${q.awarded}/${q.marksMax}</span></div><h3>${esc(q.q)}</h3>
+    if(r.kind==='subjective')return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span><span class="pill ${q.awarded>=q.marksMax?'ok':q.awarded>0?'warn':'bad'}">${q.awarded}/${q.marksMax}</span></div><h3>${esc(q.q)}</h3>${qimg(q.qi,1)}
       <div class="f" style="margin-bottom:8px"><span>Your answer</span><div style="border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap;word-break:break-word">${q.answer.trim()?esc(q.answer):'<i style="color:var(--mut)">Not answered</i>'}</div></div>
       ${q.comment?`<div class="f" style="margin-bottom:8px"><span>Teacher's comment</span><div style="font-size:14px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.comment)}</div></div>`:''}
       ${q.key?`<div class="f" style="margin-bottom:0"><span>Model answer</span><div style="border:1px dashed var(--ok);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);white-space:pre-wrap">${esc(q.key)}</div></div>`:''}</div>`).join('');
-    return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span>${q.chosen===q.ans?'<span class="pill ok">Correct</span>':q.chosen?'<span class="pill bad">Wrong</span>':'<span class="pill warn">Not answered</span>'}</div><h3>${esc(q.q)}</h3>
-    ${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===q.chosen?'wrong':''}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</div>`).join('')}</div>`).join('');
+    return head+r.review.map((q,i)=>`<div class="card q"><div class="kv" style="margin:0 0 8px"><span>Question ${i+1}</span>${q.chosen===q.ans?'<span class="pill ok">Correct</span>':q.chosen?'<span class="pill bad">Wrong</span>':'<span class="pill warn">Not answered</span>'}</div><h3>${esc(q.q)}</h3>${qimg(q.qi,1)}
+    ${[1,2,3,4].map(n=>`<div class="opt ${n===q.ans?'right':n===q.chosen?'wrong':''}"><i>${'ABCD'[n-1]}</i>${optHTML(q,n)}</div>`).join('')}</div>`).join('');
   }
   const q=wkrun.qs[wkrun.i],sel=wkrun.ans[wkrun.i],last=wkrun.i===wkrun.qs.length-1;
   return `<div class="card q"><div class="kv" style="margin:0 0 8px"><span>${esc(wkrun.title||'Weekly test')} ${wkrun.end?`<span class="pill warn" id="wktmr">${fmtT(wkrun.end-Date.now())}</span>`:''}</span><b>${wkrun.i+1} / ${wkrun.qs.length}</b></div>
   <div class="bar"><i style="width:${(wkrun.i+1)/wkrun.qs.length*100}%;background:var(--acc)"></i></div>
-  <h3 style="white-space:pre-wrap">${esc(q.q)}</h3>
+  <h3 style="white-space:pre-wrap">${esc(q.q)}</h3>${qimg(q.qi,1)}
   ${subj?`<span class="pill pu" style="margin-bottom:10px">${esc(q.marks)} marks</span><textarea data-wka="1" rows="10" maxlength="5000" placeholder="Write your answer here" style="width:100%;border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font-size:14px;line-height:1.5;margin-bottom:10px;resize:vertical">${esc(sel||'')}</textarea>`
-  :[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="wkpick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${esc(q['o'+n])}</button>`).join('')}
+  :[1,2,3,4].map(n=>`<button class="opt ${sel===n?'sel':''}" data-a="wkpick" data-v="${n}"><i>${'ABCD'[n-1]}</i>${optHTML(q,n)}</button>`).join('')}
   <div style="display:flex;justify-content:space-between;margin-top:6px;gap:8px"><button class="btn line" data-a="wkprev" ${wkrun.i?'':'disabled'}>Previous</button>
   ${last?`<button class="btn" data-a="wkfinish">Submit test</button>`:`<button class="btn" data-a="wknext">Next</button>`}</div></div>`;
 }
@@ -1619,12 +1672,12 @@ Object.assign(A,{
     const e=WK.edit,subj=e.kind==='subjective';if(!e.title.trim()){toast('Enter a paper title');return}
     let qs;
     if(subj){
-      qs=e.questions.filter(q=>(q.q||'').trim()||String(q.key||'').trim());
-      for(let i=0;i<qs.length;i++){const q=qs[i];if(!(q.q||'').trim()){toast('Question '+(i+1)+' needs the question text');return}if(!(+q.marks>=0.25&&+q.marks<=100)){toast('Question '+(i+1)+' needs marks between 0.25 and 100');return}}
-      qs=qs.map(q=>({q:q.q,marks:+q.marks,key:q.key||''}));
+      qs=e.questions.filter(q=>(q.q||'').trim()||String(q.key||'').trim()||q.qi);
+      for(let i=0;i<qs.length;i++){const q=qs[i];if(!(q.q||'').trim()&&!q.qi){toast('Question '+(i+1)+' needs the question text or a picture');return}if(!(+q.marks>=0.25&&+q.marks<=100)){toast('Question '+(i+1)+' needs marks between 0.25 and 100');return}}
+      qs=qs.map(q=>({q:q.q||'',marks:+q.marks,key:q.key||'',qi:q.qi||''}));
     }else{
-      qs=e.questions.filter(q=>q.q.trim()||q.o1.trim()||q.o2.trim()||q.o3.trim()||q.o4.trim());
-      for(let i=0;i<qs.length;i++){const q=qs[i];if(!q.q.trim()||!q.o1.trim()||!q.o2.trim()||!q.o3.trim()||!q.o4.trim()){toast('Question '+(i+1)+' needs the question and all 4 options');return}}
+      qs=e.questions.filter(q=>q.q.trim()||q.o1.trim()||q.o2.trim()||q.o3.trim()||q.o4.trim()||['qi','i1','i2','i3','i4'].some(f=>q[f]));
+      for(let i=0;i<qs.length;i++){const q=qs[i];if((!q.q.trim()&&!q.qi)||[1,2,3,4].some(n=>!q['o'+n].trim()&&!q['i'+n])){toast('Question '+(i+1)+' needs the question and all 4 options (each can be text or a picture)');return}}
     }
     const status=d.s==='keep'?e.status:d.s;
     if(status==='published'&&!qs.length){toast('Add at least one question before publishing');return}
@@ -1693,6 +1746,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t
 function setPath(p,v){const k=p.split('.');let o=S;while(k.length>1)o=o[k.shift()];o[k[0]]=v}
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset.qimgUp!==undefined&&t.files&&t.files[0]){const f=t.files[0],k=t.dataset.qimgUp;t.value='';qimgPick(k,f);return}
   if(t.dataset.nf!==undefined&&t.files&&t.files.length){const fl=[...t.files];t.value='';uploadNoteFiles(+t.dataset.nf,fl);return}
   if(t.id==='sscover'&&t.files[0]){resizeCover(t.files[0]).then(u=>{ssInit();ui.ss.cover=u;render();toast('Cover photo added. Tap Save and apply')}).catch(er=>toast(er.message));return}
   if(t.id==='sslogo'&&t.files[0]){resizeLogo(t.files[0]).then(u=>{ssInit();ui.ss.logo=u;render();toast('Logo added. Tap Save and apply')}).catch(er=>toast(er.message));return}
