@@ -40,6 +40,20 @@ app.use(session({
 const clone = x => x === undefined ? x : JSON.parse(JSON.stringify(x));
 const uid = () => 'u' + crypto.randomBytes(9).toString('base64url');
 const GRADES = ['Class 1','Class 2','Class 3','Class 4','Class 5','Class 6','Class 7','Class 8','Class 9','Matric'];
+
+/* ===== Fixed subjects and chapters (1st Year + 2nd Year). Admin can edit chapters in the panel. ===== */
+const FIXED_SUBJECTS=['Biology','Physics','Chemistry','Logical Reasoning','English'];
+const chs=(y,a)=>a.map(n=>({y,n}));
+const defaultChapters=()=>({
+  'Biology':[...chs(1,['Introduction','Biological Molecules','Enzymes','The Cell','Variety of Life','Kingdom Prokaryotae','Kingdom Protoctista','Kingdom Fungi','Kingdom Plantae','Kingdom Animalia']),
+    ...chs(2,['Bioenergetics','Nutrition','Gaseous Exchange','Transport','Homeostasis','Support and Movement','Coordination and Control','Reproduction','Growth and Development','Chromosomes and DNA','Cell Cycle','Variation and Genetics','Biotechnology','Evolution','Ecosystem','Man and his Environment'])],
+  'Physics':[...chs(1,['Measurements','Vectors and Equilibrium','Motion and Force','Work and Energy','Circular Motion','Fluid Dynamics','Oscillations','Waves','Physical Optics','Optical Instruments','Heat and Thermodynamics']),
+    ...chs(2,['Electrostatics','Current Electricity','Electromagnetism','Electromagnetic Induction','Alternating Current','Physics of Solids','Electronics','Dawn of Modern Physics','Atomic Spectra','Nuclear Physics'])],
+  'Chemistry':[...chs(1,['Basic Concepts','Experimental Techniques','Gases','Liquids','Solids','Chemical Equilibrium','Reaction Kinetics','Thermochemistry','Electrochemistry','Chemical Bonding']),
+    ...chs(2,['s and p Block Elements','Transition Elements','Fundamental Principles of Organic Chemistry','Chemistry of Hydrocarbons','Alkyl Halides','Alcohols and Phenols','Aldehydes and Ketones','Carboxylic Acids','Macromolecules','Common Industrial Chemicals','Environmental Chemistry'])],
+  'Logical Reasoning':[...chs(1,['Critical Thinking','Letter and Symbol Series','Logical Problems','Course of Action']),...chs(2,['Logical Deductions','Making Judgments','Cause and Effect','Assumptions and Arguments'])],
+  'English':[...chs(1,['Vocabulary (Synonyms and Antonyms)','Parts of Speech','Tenses','Spelling and Punctuation','Idioms and Phrases']),...chs(2,['Sentence Structure and Error Spotting','Active and Passive Voice','Direct and Indirect Speech','Sentence Completion','Comprehension'])]
+});
 const defaultSeed = () => ({
   brand:{name:'My Academy',short:'MA',logo:'',c1:'#7c2ddb',c2:'#e8399b',c3:'#ff7a1a',acc:'#f97316',dark:false,footer:'All rights reserved.'},
   profile:{adminName:'',position:'',phone:'',school:'',address:'',done:false},
@@ -51,11 +65,11 @@ const defaultSeed = () => ({
     {id:'videos',label:'Videos',icon:'video',on:true},{id:'papers',label:'Past Papers',icon:'paper',on:true},
     {id:'messages',label:'Messages',icon:'mail',on:true}
   ],
-  subjects:[],assigned:[],courses:[],folders:[],papers:[],notes:[],messages:[],board:[],posts:[],
+  subjects:[...FIXED_SUBJECTS],chapters:defaultChapters(),assigned:[],courses:[],folders:[],papers:[],notes:[],messages:[],board:[],posts:[],
   community:{replies:0,helpful:0},tests:[],questions:[]
 });
 
-const GLOBAL=['brand','profile','menu','subjects','board'];
+const GLOBAL=['brand','profile','menu','subjects','chapters','board'];
 const OWNED=['assigned','courses','folders','papers','notes','messages','questions'];
 let ready;
 async function ensureSchema(){
@@ -72,8 +86,11 @@ async function ensureSchema(){
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT ''`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_resets (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,otp_hash TEXT NOT NULL,channel TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,token_hash TEXT,token_expires_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS note_files (id TEXT PRIMARY KEY,name TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,data BYTEA NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`);
   const r=await pool.query('SELECT id FROM portal_shared WHERE id=1');
   if(!r.rowCount) await pool.query('INSERT INTO portal_shared(id,data) VALUES(1,$1)',[defaultSeed()]);
+  /* one-time upgrade: fixed 5 subjects + chapters (only runs when 'chapters' is missing) */
+  await pool.query(`UPDATE portal_shared SET data=data||jsonb_build_object('subjects',$1::jsonb,'chapters',$2::jsonb),updated_at=NOW() WHERE id=1 AND NOT (data ? 'chapters')`,[JSON.stringify(FIXED_SUBJECTS),JSON.stringify(defaultChapters())]);
 }
 ready=ensureSchema().catch(e=>{console.error(e);process.exit(1)});
 
@@ -128,7 +145,10 @@ app.post('/api/posts', auth, async (req,res,next)=>{try{await ready; const u=awa
   const r=await pool.query(`UPDATE portal_shared SET data=jsonb_set(data,'{posts}',(SELECT COALESCE(jsonb_agg(e ORDER BY n),'[]'::jsonb) FROM (SELECT e,n FROM jsonb_array_elements(jsonb_build_array($1::jsonb)||COALESCE(data->'posts','[]'::jsonb)) WITH ORDINALITY AS t(e,n) ORDER BY n LIMIT ${MAX_POSTS}) q)),updated_at=NOW() WHERE id=1 RETURNING data->'posts' AS posts`,[JSON.stringify(post)]);
   res.json({ok:true,posts:r.rows[0]?.posts||[]});}catch(e){next(e)}});
 
-app.put('/api/admin/shared', admin, async (req,res,next)=>{try{await ready; const data=req.body?.data; if(!data||typeof data!=='object')return res.status(400).json({error:'Invalid shared data'}); delete data.posts; delete data.profile; if(data.brand&&typeof data.brand.logo==='string'&&data.brand.logo.length>700000)return res.status(400).json({error:'Logo is too large. Please upload a smaller image.'}); await pool.query("UPDATE portal_shared SET data=($1::jsonb)||jsonb_build_object('posts',COALESCE(data->'posts','[]'::jsonb))||CASE WHEN data ? 'profile' THEN jsonb_build_object('profile',data->'profile') ELSE '{}'::jsonb END,updated_at=NOW() WHERE id=1",[JSON.stringify(data)]); res.json({ok:true});}catch(e){next(e)}});
+app.put('/api/admin/shared', admin, async (req,res,next)=>{try{await ready; const data=req.body?.data; if(!data||typeof data!=='object')return res.status(400).json({error:'Invalid shared data'}); delete data.posts; delete data.profile; if(data.brand&&typeof data.brand.logo==='string'&&data.brand.logo.length>700000)return res.status(400).json({error:'Logo is too large. Please upload a smaller image.'}); await pool.query("UPDATE portal_shared SET data=($1::jsonb)||jsonb_build_object('posts',COALESCE(data->'posts','[]'::jsonb))||CASE WHEN data ? 'profile' THEN jsonb_build_object('profile',data->'profile') ELSE '{}'::jsonb END,updated_at=NOW() WHERE id=1",[JSON.stringify(data)]);
+  try{const keep=(Array.isArray(data.notes)?data.notes:[]).flatMap(n=>Array.isArray(n&&n.files)?n.files.map(f=>f&&f.id):[]).filter(Boolean);
+    await pool.query("DELETE FROM note_files WHERE created_at<NOW()-INTERVAL '1 hour' AND NOT (id=ANY($1::text[]))",[keep]);}catch(e){console.error('note file cleanup',e.message)}
+  res.json({ok:true});}catch(e){next(e)}});
 
 app.put('/api/admin/school', admin, async (req,res,next)=>{try{await ready;
   const b=req.body||{}, t=(v,n)=>String(v==null?'':v).trim().slice(0,n);
@@ -139,7 +159,9 @@ app.put('/api/admin/school', admin, async (req,res,next)=>{try{await ready;
   if(logo&&(!/^data:image\/(png|jpe?g|webp|svg\+xml);base64,[A-Za-z0-9+\/=]+$/.test(logo)||logo.length>700000)) return res.status(400).json({error:'Logo is too large or not a valid image. Please upload a smaller image.'});
   const col=(v,d)=>/^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):d;
   const short=(school.split(/\s+/).map(w=>w[0]).join('').slice(0,3)||school.slice(0,2)).toUpperCase();
-  const profile={adminName,position:t(b.position,80),phone:t(b.phone,40),school,address:t(b.address,300),done:true};
+  const cover=typeof b.cover==='string'?b.cover:'';
+  if(cover&&(!/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+\/=]+$/.test(cover)||cover.length>900000)) return res.status(400).json({error:'Cover photo is too large or not a valid image. Please choose a smaller image.'});
+  const profile={adminName,position:t(b.position,80),phone:t(b.phone,40),school,address:t(b.address,300),cover,done:true};
   const brand={name:school,short,logo,footer:t(b.footer,200)||'All rights reserved.',c1:col(b.c1,'#7c2ddb'),c2:col(b.c2,'#e8399b'),c3:col(b.c3,'#ff7a1a'),acc:col(b.acc,'#f97316')};
   await pool.query("UPDATE portal_shared SET data=jsonb_set(jsonb_set(data,'{profile}',$1::jsonb,true),'{brand}',COALESCE(data->'brand','{}'::jsonb)||$2::jsonb,true),updated_at=NOW() WHERE id=1",[JSON.stringify(profile),JSON.stringify(brand)]);
   res.json({ok:true,profile,brand});
@@ -229,6 +251,29 @@ async function wAttempt(pid,uid){const r=await pool.query('SELECT * FROM weekly_
 const studentOnly=async(req,res,next)=>{try{const u=await getUser(req.session.userId);if(!u)return res.status(401).json({error:'Session expired'});if(u.role!=='student')return res.status(403).json({error:'Students only'});req.user=u;next()}catch(e){next(e)}};
 
 /* ---- Admin: paper maker ---- */
+/* Dashboard overview: har published/closed paper ke liye kitne students ko mila, kitno ne diya, kitne reh gaye, Pass / Fail */
+app.get('/api/weekly/admin/overview',admin,wrap(async(req,res)=>{await ready;
+  const papers=(await pool.query("SELECT * FROM weekly_papers WHERE status IN ('published','closed') ORDER BY created_at DESC")).rows;
+  const studs=(await pool.query("SELECT id,name,username,grade FROM users WHERE role='student'")).rows;
+  const out=[];
+  for(const p of papers){
+    const assigned=studs.filter(st=>wVisible(p.to_whom,st));
+    const ids=new Set(assigned.map(x=>x.id));
+    const rows=(await pool.query('SELECT * FROM weekly_attempts WHERE paper_id=$1',[p.id])).rows;
+    let submitted=0,inProgress=0,pass=0,fail=0,pending=0;
+    for(const r of rows){
+      if(!ids.has(r.user_id))continue;
+      const att=await wExpireIfNeeded(p,r);
+      if(!att.submitted_at){inProgress++;continue}
+      submitted++;
+      const x=wResult(p,att,false);
+      if(x.pending)pending++;else if(x.passed)pass++;else fail++;
+    }
+    out.push({id:p.id,title:p.title,subject:p.subject,kind:p.kind||'objective',status:p.status,assigned:assigned.length,attempted:submitted,inProgress,remaining:Math.max(0,assigned.length-submitted),pass,fail,pending});
+  }
+  const sum=k=>out.reduce((a,x)=>a+x[k],0);
+  res.json({students:studs.length,papers:out,totals:{papers:out.length,assigned:sum('assigned'),attempted:sum('attempted'),remaining:sum('remaining'),inProgress:sum('inProgress'),pass:sum('pass'),fail:sum('fail'),pending:sum('pending')}});
+}));
 app.get('/api/weekly/admin',admin,wrap(async(req,res)=>{await ready;
   const r=await pool.query('SELECT p.*,(SELECT COUNT(*)::int FROM weekly_attempts a WHERE a.paper_id=p.id) AS attempts,(SELECT COUNT(*)::int FROM weekly_attempts a WHERE a.paper_id=p.id AND a.submitted_at IS NOT NULL) AS submitted,(SELECT COUNT(*)::int FROM weekly_attempts a WHERE a.paper_id=p.id AND a.submitted_at IS NOT NULL AND a.graded_at IS NULL) AS ungraded FROM weekly_papers p ORDER BY p.created_at DESC');
   const studs=(await pool.query("SELECT id,name,username,grade FROM users WHERE role='student'")).rows;
@@ -375,6 +420,50 @@ app.get('/api/weekly/:id/result',auth,studentOnly,wrap(async(req,res)=>{await re
 }));
 
 
+
+/* ===== LEADERBOARD (real students, computed from saved progress) ===== */
+app.get('/api/leaderboard', auth, wrap(async(req,res)=>{ await ready;
+  res.set('Cache-Control','no-store');
+  const rows=(await pool.query("SELECT u.id,u.name,sp.data FROM users u LEFT JOIN student_progress sp ON sp.user_id=u.id WHERE u.role='student'")).rows;
+  const list=rows.map(r=>{
+    const d=r.data||{}, pts=Number(d.user&&d.user.points)||0, tests=Array.isArray(d.tests)?d.tests.filter(t=>t&&t.status!=='In Progress'):[];
+    const solved=tests.reduce((a,t)=>a+(Number(t.total)||0),0), correct=tests.reduce((a,t)=>a+(Number(t.correct)||0),0);
+    return {id:r.id,name:r.name,score:pts,solved,acc:solved?Math.round(correct/solved*1000)/10:0};
+  }).sort((a,b)=>b.score-a.score||b.acc-a.acc||a.name.localeCompare(b.name));
+  res.json({list,me:req.session.userId});
+}));
+
+/* ===== NOTE FILES (PDF / pictures stored in the database) ===== */
+const NOTE_MAX=15*1024*1024;
+function sniffFile(b){
+  if(b.length<12)return null;
+  if(b.slice(0,5).toString('latin1')==='%PDF-')return 'application/pdf';
+  if(b[0]===0x89&&b.slice(1,4).toString('latin1')==='PNG')return 'image/png';
+  if(b[0]===0xFF&&b[1]===0xD8&&b[2]===0xFF)return 'image/jpeg';
+  if(b.slice(0,4).toString('latin1')==='RIFF'&&b.slice(8,12).toString('latin1')==='WEBP')return 'image/webp';
+  if(b.slice(0,3).toString('latin1')==='GIF')return 'image/gif';
+  return null;
+}
+app.post('/api/admin/note-files', admin, express.raw({type:()=>true,limit:NOTE_MAX}), wrap(async(req,res)=>{ await ready;
+  const buf=req.body; if(!Buffer.isBuffer(buf)||!buf.length)throw httpErr(400,'No file received');
+  const mime=sniffFile(buf); if(!mime)throw httpErr(400,'Only PDF, JPG, PNG, WEBP or GIF files are allowed');
+  let name='file'; try{name=decodeURIComponent(String(req.get('x-file-name')||'file'))}catch(e){}
+  name=name.replace(/[\\/\r\n"]/g,'_').slice(0,120)||'file';
+  const id='f'+crypto.randomBytes(9).toString('base64url');
+  await pool.query('INSERT INTO note_files(id,name,mime,size,data) VALUES($1,$2,$3,$4,$5)',[id,name,mime,buf.length,buf]);
+  res.json({ok:true,file:{id,name,mime,size:buf.length}});
+}));
+app.get('/api/note-files/:id', auth, wrap(async(req,res)=>{ await ready;
+  const u=await getUser(req.session.userId); if(!u)return res.status(401).json({error:'Session expired'});
+  const f=(await pool.query('SELECT * FROM note_files WHERE id=$1',[req.params.id])).rows[0]; if(!f)throw httpErr(404,'File not found');
+  if(u.role!=='admin'){
+    const notes=(await getShared()).notes||[];
+    const ok=notes.some(n=>Array.isArray(n.files)&&n.files.some(x=>x&&x.id===f.id)&&wVisible(n.to,u));
+    if(!ok)throw httpErr(403,'You do not have access to this file');
+  }
+  res.set({'Content-Type':f.mime,'Content-Length':f.data.length,'Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff','Content-Disposition':`inline; filename="${f.name.replace(/[^\x20-\x7E]/g,'_')}"`});
+  res.end(f.data);
+}));
 /* ===== ADMIN FORGOT PASSWORD (OTP via Email or Mobile) ===== */
 const forgotLimiter = rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts. Please try again later.' } });
 const OTP_TTL_MIN = 10, OTP_MAX_TRIES = 5, OTP_COOLDOWN_SEC = 60, RESET_TOKEN_MIN = 15;
