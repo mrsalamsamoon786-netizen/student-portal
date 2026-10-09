@@ -87,6 +87,7 @@ async function ensureSchema(){
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile TEXT NOT NULL DEFAULT ''`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_resets (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,otp_hash TEXT NOT NULL,channel TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,token_hash TEXT,token_expires_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`);
   await pool.query(`CREATE TABLE IF NOT EXISTS note_files (id TEXT PRIMARY KEY,name TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,data BYTEA NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS q_images (id TEXT PRIMARY KEY,mime TEXT NOT NULL,size INTEGER NOT NULL,data BYTEA NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`);
   const r=await pool.query('SELECT id FROM portal_shared WHERE id=1');
   if(!r.rowCount) await pool.query('INSERT INTO portal_shared(id,data) VALUES(1,$1)',[defaultSeed()]);
   /* one-time upgrade: fixed 5 subjects + chapters (only runs when 'chapters' is missing) */
@@ -148,6 +149,7 @@ app.post('/api/posts', auth, async (req,res,next)=>{try{await ready; const u=awa
 app.put('/api/admin/shared', admin, async (req,res,next)=>{try{await ready; const data=req.body?.data; if(!data||typeof data!=='object')return res.status(400).json({error:'Invalid shared data'}); delete data.posts; delete data.profile; if(data.brand&&typeof data.brand.logo==='string'&&data.brand.logo.length>700000)return res.status(400).json({error:'Logo is too large. Please upload a smaller image.'}); await pool.query("UPDATE portal_shared SET data=($1::jsonb)||jsonb_build_object('posts',COALESCE(data->'posts','[]'::jsonb))||CASE WHEN data ? 'profile' THEN jsonb_build_object('profile',data->'profile') ELSE '{}'::jsonb END,updated_at=NOW() WHERE id=1",[JSON.stringify(data)]);
   try{const keep=(Array.isArray(data.notes)?data.notes:[]).flatMap(n=>Array.isArray(n&&n.files)?n.files.map(f=>f&&f.id):[]).filter(Boolean);
     await pool.query("DELETE FROM note_files WHERE created_at<NOW()-INTERVAL '1 hour' AND NOT (id=ANY($1::text[]))",[keep]);}catch(e){console.error('note file cleanup',e.message)}
+  qImgCleanup();
   res.json({ok:true});}catch(e){next(e)}});
 
 app.put('/api/admin/school', admin, async (req,res,next)=>{try{await ready;
@@ -184,19 +186,22 @@ function wVisible(to,user){to=to||'all';if(to.startsWith('grade:'))return user.g
 const isSubj=p=>p&&p.kind==='subjective';
 const wTotalMarks=p=>isSubj(p)?+p.questions.reduce((a,q)=>a+Number(q.marks||0),0).toFixed(2):+(p.questions.length*Number(p.marks_per_q)).toFixed(2);
 function wCleanText(a,n){return Array.isArray(a)?a.slice(0,n).map(x=>String(x==null?'':x).slice(0,5000)):[]}
+const wImgId=v=>{v=String(v||'');return /^q[A-Za-z0-9_-]{6,30}$/.test(v)?v:''};
+const wImgs=q=>{const o={};for(const k of ['qi','i1','i2','i3','i4'])if(q&&q[k])o[k]=q[k];return o};
 function wClean(list,kind){
   if(!Array.isArray(list))throw httpErr(400,'Questions must be a list');
   if(list.length>300)throw httpErr(400,'A paper can have at most 300 questions');
   if(kind==='subjective')return list.map((x,i)=>{
-    const q=String(x&&x.q||'').trim().slice(0,2000);
-    if(!q)throw httpErr(400,'Question '+(i+1)+' needs the question text');
+    const q=String(x&&x.q||'').trim().slice(0,2000),qi=wImgId(x&&x.qi);
+    if(!q&&!qi)throw httpErr(400,'Question '+(i+1)+' needs the question text or a picture');
     const m=Number(x&&x.marks);
     if(!(m>=0.25&&m<=100))throw httpErr(400,'Question '+(i+1)+' needs marks between 0.25 and 100');
-    return{q,marks:+m.toFixed(2),key:String(x&&x.key||'').trim().slice(0,3000)};
+    return{q,marks:+m.toFixed(2),key:String(x&&x.key||'').trim().slice(0,3000),...(qi?{qi}:{})};
   });
   return list.map((x,i)=>{
     const q={q:String(x&&x.q||'').trim().slice(0,2000),o1:String(x&&x.o1||'').trim().slice(0,500),o2:String(x&&x.o2||'').trim().slice(0,500),o3:String(x&&x.o3||'').trim().slice(0,500),o4:String(x&&x.o4||'').trim().slice(0,500),ans:Number(x&&x.ans)};
-    if(!q.q||!q.o1||!q.o2||!q.o3||!q.o4)throw httpErr(400,'Question '+(i+1)+' needs the question text and all 4 options');
+    for(const k of ['qi','i1','i2','i3','i4']){const v=wImgId(x&&x[k]);if(v)q[k]=v}
+    if(!(q.q||q.qi)||![1,2,3,4].every(n=>q['o'+n]||q['i'+n]))throw httpErr(400,'Question '+(i+1)+' needs the question (text or picture) and all 4 options (text or picture)');
     if(![1,2,3,4].includes(q.ans))throw httpErr(400,'Question '+(i+1)+' needs a correct option (A-D)');
     return q;
   });
@@ -232,7 +237,7 @@ function wResult(p,att,review){
     if(graded){
       const score=Number(att.score||0),percent=totalMarks?Math.round(score/totalMarks*1000)/10:0;
       Object.assign(out,{score,percent,passed:percent>=p.pass_pct,feedback:att.feedback||''});
-      if(review){const g=att.grading||{};out.review=p.questions.map((q,i)=>({q:q.q,marksMax:q.marks,answer:String((att.answers||[])[i]||''),awarded:Number((g.marks||[])[i]||0),comment:String((g.comments||[])[i]||''),key:p.show_answers?(q.key||''):''}))}
+      if(review){const g=att.grading||{};out.review=p.questions.map((q,i)=>({...wImgs(q),q:q.q,marksMax:q.marks,answer:String((att.answers||[])[i]||''),awarded:Number((g.marks||[])[i]||0),comment:String((g.comments||[])[i]||''),key:p.show_answers?(q.key||''):''}))}
     }
     return out;
   }
@@ -302,6 +307,7 @@ app.post('/api/weekly/admin',admin,wrap(async(req,res)=>{await ready;
     id=wid();
     await pool.query('INSERT INTO weekly_papers(id,title,subject,minutes,marks_per_q,pass_pct,to_whom,status,show_answers,shuffle,questions,kind,results_published) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false)',[id,title,subject,minutes,marks,pass,to,status,showAnswers,shuffle,JSON.stringify(questions),kind]);
   }
+  qImgCleanup();
   res.json({ok:true,id});
 }));
 app.patch('/api/weekly/admin/:id/status',admin,wrap(async(req,res)=>{await ready;
@@ -317,7 +323,7 @@ app.post('/api/weekly/admin/:id/results-publish',admin,wrap(async(req,res)=>{awa
   await pool.query('UPDATE weekly_papers SET results_published=$1,updated_at=NOW() WHERE id=$2',[pub,p.id]);
   res.json({ok:true,published:pub});
 }));
-app.delete('/api/weekly/admin/:id',admin,wrap(async(req,res)=>{await ready;await pool.query('DELETE FROM weekly_papers WHERE id=$1',[req.params.id]);res.json({ok:true})}));
+app.delete('/api/weekly/admin/:id',admin,wrap(async(req,res)=>{await ready;await pool.query('DELETE FROM weekly_papers WHERE id=$1',[req.params.id]);qImgCleanup();res.json({ok:true})}));
 app.get('/api/weekly/admin/:id/results',admin,wrap(async(req,res)=>{await ready;
   const p=await wPaper(req.params.id);if(!p)throw httpErr(404,'Paper not found');
   const rows=(await pool.query('SELECT a.*,u.name,u.username,u.grade FROM weekly_attempts a JOIN users u ON u.id=a.user_id WHERE a.paper_id=$1',[p.id])).rows;
@@ -345,7 +351,7 @@ app.get('/api/weekly/admin/:id/attempts/:userId',admin,wrap(async(req,res)=>{awa
   const u=(await pool.query('SELECT name,username,grade FROM users WHERE id=$1',[req.params.userId])).rows[0]||{};
   const g=att.grading||{};
   res.json({paper:{id:p.id,title:p.title,subject:p.subject,totalMarks:wTotalMarks(p),passPct:p.pass_pct},student:{userId:att.user_id,name:u.name||'',username:u.username||'',grade:u.grade||''},late:!!att.late,submittedAt:att.submitted_at,graded:!!att.graded_at,feedback:att.feedback||'',
-    questions:p.questions.map((q,i)=>({q:q.q,marks:q.marks,key:q.key||'',answer:String((att.answers||[])[i]||''),awarded:g.marks&&g.marks[i]!=null?Number(g.marks[i]):'',comment:String((g.comments||[])[i]||'')}))});
+    questions:p.questions.map((q,i)=>({...wImgs(q),q:q.q,marks:q.marks,key:q.key||'',answer:String((att.answers||[])[i]||''),awarded:g.marks&&g.marks[i]!=null?Number(g.marks[i]):'',comment:String((g.comments||[])[i]||'')}))});
 }));
 app.put('/api/weekly/admin/:id/attempts/:userId',admin,wrap(async(req,res)=>{await ready;
   const p=await wPaper(req.params.id);if(!p)throw httpErr(404,'Paper not found');
@@ -393,7 +399,7 @@ app.post('/api/weekly/:id/start',auth,studentOnly,wrap(async(req,res)=>{await re
     catch(e){if(e.code==='23505')att=await wAttempt(p.id,u.id);else throw e}
   }
   res.json({kind:p.kind||'objective',id:p.id,title:p.title,subject:p.subject,minutes:p.minutes,serverNow:Date.now(),endsAt:wDeadline(p,att),marksPerQ:Number(p.marks_per_q),answers:att.answers||[],
-    questions:att.q_order.map(qi=>{const q=p.questions[qi];return isSubj(p)?{q:q.q,marks:q.marks}:{q:q.q,o1:q.o1,o2:q.o2,o3:q.o3,o4:q.o4}})});
+    questions:att.q_order.map(qi=>{const q=p.questions[qi];return isSubj(p)?{q:q.q,marks:q.marks,...wImgs(q)}:{q:q.q,o1:q.o1,o2:q.o2,o3:q.o3,o4:q.o4,...wImgs(q)}})});
 }));
 const wCleanAnswers=(a,n)=>Array.isArray(a)?a.slice(0,n).map(x=>{x=Number(x);return[1,2,3,4].includes(x)?x:0}):[];
 app.post('/api/weekly/:id/save',auth,studentOnly,wrap(async(req,res)=>{await ready;
@@ -466,6 +472,34 @@ app.get('/api/note-files/:id', auth, wrap(async(req,res)=>{ await ready;
   res.set({'Content-Type':f.mime,'Content-Length':f.data.length,'Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff','Content-Disposition':`inline; filename="${f.name.replace(/[^\x20-\x7E]/g,'_')}"`});
   res.end(f.data);
 }));
+/* ===== QUESTION / OPTION DIAGRAM PICTURES (stored in the database) ===== */
+const QIMG_MAX=6*1024*1024;
+app.post('/api/admin/q-images', admin, express.raw({type:()=>true,limit:QIMG_MAX}), wrap(async(req,res)=>{ await ready;
+  const buf=req.body; if(!Buffer.isBuffer(buf)||!buf.length)throw httpErr(400,'No picture received');
+  const mime=sniffFile(buf); if(!mime||mime==='application/pdf')throw httpErr(400,'Only JPG, PNG, WEBP or GIF pictures are allowed');
+  const id='q'+crypto.randomBytes(9).toString('base64url');
+  await pool.query('INSERT INTO q_images(id,mime,size,data) VALUES($1,$2,$3,$4)',[id,mime,buf.length,buf]);
+  res.json({ok:true,id});
+}));
+app.get('/api/q-images/:id', auth, wrap(async(req,res)=>{ await ready;
+  const f=(await pool.query('SELECT mime,data FROM q_images WHERE id=$1',[req.params.id])).rows[0]; if(!f)throw httpErr(404,'Picture not found');
+  res.set({'Content-Type':f.mime,'Content-Length':f.data.length,'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff'});
+  res.end(f.data);
+}));
+/* Removes pictures that no question uses any more (older than 1 hour, so a picture you just uploaded is safe) */
+async function qImgCleanup(){
+  try{
+    const old=(await pool.query("SELECT id FROM q_images WHERE created_at<NOW()-INTERVAL '1 hour'")).rows.map(r=>r.id);
+    if(!old.length)return;
+    const blob=[
+      JSON.stringify((await pool.query('SELECT data FROM portal_shared WHERE id=1')).rows[0]?.data||{}),
+      (await pool.query('SELECT questions::text AS t FROM weekly_papers')).rows.map(r=>r.t).join('\n'),
+      (await pool.query('SELECT data::text AS t FROM student_progress')).rows.map(r=>r.t).join('\n')
+    ].join('\n');
+    const dead=old.filter(id=>!blob.includes(id));
+    if(dead.length)await pool.query('DELETE FROM q_images WHERE id=ANY($1::text[])',[dead]);
+  }catch(e){console.error('q image cleanup',e.message)}
+}
 /* ===== ADMIN FORGOT PASSWORD (OTP via Email or Mobile) ===== */
 const forgotLimiter = rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts. Please try again later.' } });
 const OTP_TTL_MIN = 10, OTP_MAX_TRIES = 5, OTP_COOLDOWN_SEC = 60, RESET_TOKEN_MIN = 15;
