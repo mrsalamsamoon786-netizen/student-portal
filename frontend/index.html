@@ -493,11 +493,8 @@ const stats=()=>{const d=done();const c=d.reduce((a,t)=>a+t.correct,0),n=d.reduc
   return{completed:d.length,progress:S.tests.length-d.length,solved:n,correct:c,wrong:n-c,acc:n?Math.round(c/n*1000)/10:0,avg:d.length?Math.round(d.reduce((a,t)=>a+t.correct/t.total*100,0)/d.length):0}};
 /* Leaderboard = real students (from server) + any entries the Admin added. Your own row always uses your latest local points. */
 function lbList(){
-  const a=me(),myId=a&&a.id,real=ui.lbd&&ui.lbd.list,st=stats();
-  const mine={id:myId,name:S.user.name||'You',score:S.user.points,acc:st.acc,solved:st.solved,me:true};
-  const base=S.board.map(b=>({name:b.name,score:+b.score||0,acc:b.acc,solved:b.solved}));
-  const others=real?real.filter(r=>r.id!==myId).map(r=>({id:r.id,name:r.name,score:r.score,acc:r.acc,solved:r.solved})):[];
-  return base.concat(others,[mine]).sort((x,y)=>y.score-x.score);
+  const a=me(),st=stats();
+  return [{id:a&&a.id,name:S.user.name||'You',score:S.user.points,acc:st.acc,solved:st.solved,me:true}];
 }
 async function lbRefresh(force){
   if(!onlineReady||isStaff())return;
@@ -505,8 +502,8 @@ async function lbRefresh(force){
   ui.lbAt=Date.now();
   try{const d=await api('/api/leaderboard');ui.lbd=d;if(['leaderboard','dashboard'].includes(S.route))render()}catch(e){}
 }
-const rank=()=>1+lbList().filter(b=>!b.me&&b.score>S.user.points).length;
-const total=()=>lbList().length;
+const rank=()=>(ui.lbd&&ui.lbd.rank)||1;
+const total=()=>(ui.lbd&&ui.lbd.total)||1;
 const topPct=()=>Math.round(rank()/total()*1000)/10;
 const initials=n=>String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const rcol=p=>p>=75?'var(--ok)':p>=60?'var(--acc)':'var(--bad)';
@@ -672,11 +669,12 @@ function pgReports(){
 
 function pgLeaderboard(){
   lbRefresh();
-  const all=lbList(),s=stats(),r=rank();
+  const s=stats(),r=rank(),n=total();
   return `<div class="card" style="background:linear-gradient(135deg,#fff3e8,#f6eaff)"><div class="kv" style="margin:0;color:#17141f"><span>Your rank</span><b style="font-size:30px">#${r}</b></div>
   <div class="mini" style="color:#17141f"><div><b>${S.user.points}</b><span>Score</span></div><div><b>${s.acc}%</b><span>Accuracy</span></div><div><b>${s.solved}</b><span>Solved</span></div></div>
-  <p class="hint" style="margin:10px 0 0;color:#17141f">${all.length} students &middot; every correct answer in the question bank gives 1 point.</p></div>
-  <div class="card">${all.map((b,i)=>`<div class="lrow ${b.me?'me':''}"><span class="rk">${i+1}</span><div style="flex:1"><b style="font-size:14px">${esc(b.name)}${b.me?' (You)':''}</b><div style="font-size:12px;color:var(--mut)">${b.acc||0}% accuracy &middot; ${b.solved||0} solved</div></div><b style="color:var(--acc)">${b.score}</b></div>`).join('')}</div>`;
+  <p class="hint" style="margin:10px 0 0;color:#17141f">Rank ${r} of ${n} students &middot; every correct answer in the question bank gives 1 point. Only your own result is shown here.</p></div>
+  <div class="card"><div class="sec"><h3>My progress</h3></div><div class="kv"><span>Accuracy</span><b>${s.acc}%</b></div><div class="bar"><i style="width:${s.acc}%;background:${rcol(s.acc)}"></i></div>
+  <div class="kv"><span>Tests completed</span><b>${s.completed}</b></div><div class="kv"><span>MCQs solved</span><b>${s.solved}</b></div></div>`;
 }
 
 function pgCommunity(){
@@ -730,7 +728,6 @@ function fpHTML(w){
   <button class="btn" ${w} ${busy} data-a="fpreset">${f.busy?'Saving...':'Reset password'}</button>${back}`;
 }
 /* ============ VOICE (login guide + welcome) ============ */
-const HONOR='Sir';
 const voiceOn=()=>{try{return localStorage.getItem('pv_mute')!=='1'}catch(e){return true}};
 function pickVoice(){try{const v=speechSynthesis.getVoices();return v.find(x=>/^en[-_]IN/i.test(x.lang))||v.find(x=>/^en[-_]GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null}catch(e){return null}}
 function say(text,o={}){
@@ -789,8 +786,8 @@ function renderLogin(){
   }
   $('#root').innerHTML=`<div class="login v4"><div class="lbg"><i></i><i></i><i></i></div><div class="lwrap">
     <aside class="lside"><div class="lbrand">${mark}<span>${esc(b.name)}</span></div>
-      <h1>${first?'Let\'s get started':'Welcome back'}</h1><p>${first?'Create your admin account to begin.':'Sign in to continue learning, take tests and track your results.'}</p>
-      <div class="lfeat"><div><span>${I('bolt',18)}</span>Practice tests and weekly papers</div><div><span>${I('chart',18)}</span>Instant results with Pass / Fail</div><div><span>${I('trophy',18)}</span>Leaderboard and progress tracking</div></div></aside>
+      <h1>${first?'Let\'s get started':'Welcome back'}</h1><p>${first?'Create your admin account to begin.':'Sign in to continue.'}</p>
+      </aside>
     <div class="card lcard">${form}</div></div></div>`;
 }
 
@@ -882,11 +879,11 @@ async function showLoginWelcome(){
   const a=me();if(!a)return;
   const t0=Date.now(),staff=a.role==='admin',b=S.brand,name=a.name,el=$('#wlc');
   const mark=b.logo?`<img src="${esc(b.logo)}" alt="">`:`<span class="lg">${esc(b.short)}</span>`;
-  const greet='Assalamu alaikum '+name+' '+HONOR+'. Congratulations! You have logged in successfully.';
+  const greet='Assalamu alaikum '+name+'. Congratulations! You have logged in successfully.';
   ui.wlcSpeech=greet;
   el.innerHTML=`<div class="wlc" role="dialog" aria-modal="true" aria-label="Welcome"><div class="box wbox">
     <div class="whead">${mark}<svg class="wcheck" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="23"/><path d="M15 27l8 8 15-17"/></svg></div>
-    <div class="wsalam">Assalam o Alaikum</div><h2>${esc(name)} ${HONOR}</h2>
+    <div class="wsalam">Assalam o Alaikum</div><h2>${esc(name)}</h2>
     <p class="wcong">Congratulations! You have logged in successfully.</p>
     <div id="wupd"><div class="wload"><i></i><i></i><i></i></div></div>
     <button class="btn wgo" data-a="wlcclose">${staff?'Open my Dashboard':'Go to my Dashboard'} ${I('right',16)}</button>
