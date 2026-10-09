@@ -430,7 +430,9 @@ app.get('/api/leaderboard', auth, wrap(async(req,res)=>{ await ready;
     const solved=tests.reduce((a,t)=>a+(Number(t.total)||0),0), correct=tests.reduce((a,t)=>a+(Number(t.correct)||0),0);
     return {id:r.id,name:r.name,score:pts,solved,acc:solved?Math.round(correct/solved*1000)/10:0};
   }).sort((a,b)=>b.score-a.score||b.acc-a.acc||a.name.localeCompare(b.name));
-  res.json({list,me:req.session.userId});
+  /* Student ko dusre students ka naam/score nahi bheja jata: sirf apna row, rank aur total */
+  const mine=list.findIndex(x=>x.id===req.session.userId);
+  res.json({list:mine>=0?[list[mine]]:[],me:req.session.userId,rank:mine>=0?mine+1:null,total:list.length});
 }));
 
 /* ===== NOTE FILES (PDF / pictures stored in the database) ===== */
